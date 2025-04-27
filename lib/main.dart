@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kopitan_app/pages/home_page.dart';
+import 'package:kopitan_app/pages/home_screen.dart';
 import 'package:kopitan_app/pages/splash_screen.dart'; // Tambahkan import ini
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   runApp(const MyApp());
