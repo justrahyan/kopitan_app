@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:kopitan_app/pages/home_screen.dart';
 
 final menu = [
-  {'icon': LucideIcons.home, 'destination': const KopitanAppMainScreen()},
-  {'icon': LucideIcons.home, 'destination': const KopitanAppMainScreen()},
+  {
+    'iconActive': 'assets/images/home-primary.png',
+    'iconInactive': 'assets/images/home-secondary.png',
+    'destination': const KopitanHomeScreen(),
+  },
+  {
+    'iconActive': 'assets/images/drink-primary.png',
+    'iconInactive': 'assets/images/drink-secondary.png',
+    'destination': const Center(child: Text('Menu')),
+  },
+  {
+    'iconActive': 'assets/images/receipt-primary.png',
+    'iconInactive': 'assets/images/receipt-secondary.png',
+    'destination': const Center(child: Text('Orderan Anda')),
+  },
+  {
+    'iconActive': 'assets/images/user-primary.png',
+    'iconInactive': 'assets/images/user-secondary.png',
+    'destination': const Center(child: Text('Profile')),
+  },
 ];

@@ -1,63 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:kopitan_app/widgets/common_button.dart';
+import 'onboarding_screen.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Setelah 2 detik, langsung ke Onboarding
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(
+            milliseconds: 400,
+          ), // Lebih cepat dan halus
+          pageBuilder: (_, __, ___) => const OnboardingScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SizedBox(
-        height: size.height,
-        width: size.width,
-        child: Stack(
-          children: [
-            SizedBox.expand(
-              child: Image.asset(
-                "assets/images/splash_screen.png",
-                fit: BoxFit.cover,
-              ),
-            ),
-            Positioned(
-              bottom: 45,
-              right: 0,
-              left: 0,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 30),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "Mulai Hari dengan Kopi Terbaik.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: 15),
-                    Text(
-                      "Dari espresso hingga latte favoritmu, kami siap menemani harimu dengan satu klik.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: 50),
-                    CommonButton(title: "Mulai Sekarang", onTab: () {}),
-                  ],
-                ),
-              ),
-            ),
-          ],
+      backgroundColor: Colors.white, // background splash
+      body: Center(
+        child: Image.asset(
+          'assets/images/logo-kopitan-primary.png', // hanya logo primary saja
+          width: 140,
+          height: 140,
         ),
       ),
     );

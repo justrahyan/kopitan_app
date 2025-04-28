@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kopitan_app/colors.dart';
 
 class CommonButton extends StatelessWidget {
@@ -20,7 +21,7 @@ class CommonButton extends StatelessWidget {
           child: Center(
             child: Text(
               title,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 color: xprimaryColor,
                 fontWeight: FontWeight.w600,
