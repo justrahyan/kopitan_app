@@ -141,6 +141,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
 
   Widget _buildUserInfo() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -226,7 +227,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.7,
+        childAspectRatio: 1,
       ),
     );
   }
@@ -245,7 +246,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(8),
               ),
-              child: Image.asset(imagePath, fit: BoxFit.cover),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
             ),
           ),
           Padding(
@@ -259,11 +260,15 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
                     name,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: xprimaryColor,
+                      color: Colors.black,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(price, style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    price,
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
                 ],
               ),
             ),

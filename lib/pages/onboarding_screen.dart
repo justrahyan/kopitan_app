@@ -28,7 +28,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Create offset animation for logo (from center to top)
     _logoOffsetAnimation = Tween<Offset>(
       begin: const Offset(0, 0), // Center position
-      end: const Offset(0, -1.5), // Top position (adjust as needed)
+      end: const Offset(0, -2.3), // Top position (adjust as needed)
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Start animation after a short delay

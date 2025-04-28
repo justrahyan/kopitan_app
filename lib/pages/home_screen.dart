@@ -151,6 +151,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
       ), // tambahkan padding di sini
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
             'Rekomendasi Spesial untuk Anda',
@@ -158,7 +159,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 180,
+            height: 210,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
@@ -212,7 +213,8 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          SizedBox(
+            height: 100,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.asset(imagePath, fit: BoxFit.cover),
@@ -273,7 +275,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.7,
+            childAspectRatio: 1,
             children: [
               _buildCoffeeItem(
                 'Gula Aren',
@@ -336,7 +338,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(8),
               ),
-              child: Image.asset(imagePath, fit: BoxFit.cover),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
             ),
           ),
           Padding(
@@ -350,11 +352,15 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                     name,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: xprimaryColor,
+                      color: Colors.black,
+                      fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(price, style: const TextStyle(color: Colors.grey)),
+                  Text(
+                    price,
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
                 ],
               ),
             ),
