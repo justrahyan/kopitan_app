@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kopitan_app/colors.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
+import 'package:kopitan_app/pages/menu_screen.dart';
 
 class KopitanHomeScreen extends StatefulWidget {
   const KopitanHomeScreen({super.key});
@@ -236,16 +238,30 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Coffee',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              Text(
-                'Semua',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: () {
+                  // Gunakan Navigator untuk mengubah index di KopitanAppMainScreen
+                  final parentState =
+                      context
+                          .findAncestorStateOfType<KopitanAppMainScreenState>();
+                  if (parentState != null) {
+                    parentState.setState(() {
+                      parentState.indexMenu =
+                          1; // Angka 1 sesuai dengan index menu di bottom nav
+                    });
+                  }
+                },
+                child: const Text(
+                  'Semua',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

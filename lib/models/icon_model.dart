@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'package:kopitan_app/pages/home_screen.dart';
+import 'package:kopitan_app/pages/menu_screen.dart';
 
 final menu = [
   {
@@ -11,7 +12,7 @@ final menu = [
   {
     'iconActive': 'assets/images/drink-primary.png',
     'iconInactive': 'assets/images/drink-secondary.png',
-    'destination': const Center(child: Text('Menu')),
+    'destination': const KopitanMenuScreen(),
   },
   {
     'iconActive': 'assets/images/receipt-primary.png',

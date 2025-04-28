@@ -157,12 +157,13 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
-          );
         }
+        //  else {
+        //   Navigator.pushReplacement(
+        //     context,
+        //     MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
+        //   );
+        // }
       } catch (e) {
         print('Error reading Firestore: $e');
         ScaffoldMessenger.of(context).showSnackBar(
