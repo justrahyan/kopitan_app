@@ -3,8 +3,8 @@ import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/models/icon_model.dart';
 import 'package:kopitan_app/pages/home_screen.dart';
 import 'package:kopitan_app/pages/menu_screen.dart';
-// import 'package:kopitan_app/pages/order_screen.dart';
-// import 'package:kopitan_app/pages/profile_screen.dart';
+import 'package:kopitan_app/pages/order_screen.dart';
+import 'package:kopitan_app/pages/profile_screen.dart';
 
 class KopitanAppMainScreen extends StatefulWidget {
   const KopitanAppMainScreen({super.key});
@@ -18,8 +18,8 @@ class KopitanAppMainScreenState extends State<KopitanAppMainScreen> {
   final List<Widget> _screens = [
     const KopitanHomeScreen(),
     const KopitanMenuScreen(),
-    // const OrderScreen(),
-    // const ProfileScreen(),
+    const KopitanOrderScreen(),
+    const KopitanProfileScreen(),
   ];
   @override
   Widget build(BuildContext context) {

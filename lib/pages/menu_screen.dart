@@ -37,7 +37,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
                   _buildUserInfo(),
                   const SizedBox(height: 20),
                 ],
@@ -144,6 +144,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[100],
+        border: Border.all(color: Colors.black, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
