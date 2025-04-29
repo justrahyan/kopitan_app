@@ -5,7 +5,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Register user biasa
+  /// Registrasi user dengan role default: "user"
   Future<User?> registerUser({
     required String fullName,
     required String username,
@@ -13,45 +13,58 @@ class AuthService {
     required String password,
   }) async {
     try {
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(email: email, password: password);
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      User? user = userCredential.user;
+      final user = userCredential.user;
 
       if (user != null) {
-        // Tambahkan data user ke Firestore
+        // Simpan data user ke Firestore
         await _firestore.collection('users').doc(user.uid).set({
           'full_name': fullName,
           'username': username,
           'email': email,
-          'role': 'user', // <-- Tambah role user otomatis di sini
-          'created_at': DateTime.now(),
+          'role': 'user', // default role
+          'created_at': FieldValue.serverTimestamp(),
         });
       }
 
       return user;
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuth Register Error: ${e.message}');
+      return null;
     } catch (e) {
-      print('Register Error: $e');
+      print('General Register Error: $e');
       return null;
     }
   }
 
-  // Login user
+  /// Login user
   Future<User?> loginUser(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
+      final result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuth Login Error: ${e.message}');
+      return null;
     } catch (e) {
-      print('Login Error: $e');
+      print('General Login Error: $e');
       return null;
     }
   }
 
-  // Logout
+  /// Logout user
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  /// Cek user login saat ini
+  User? getCurrentUser() {
+    return _auth.currentUser;
   }
 }

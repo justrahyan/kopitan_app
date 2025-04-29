@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/colors.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class KopitanProfileScreen extends StatefulWidget {
