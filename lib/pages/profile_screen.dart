@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kopitan_app/pages/login_screen.dart'; // Atau login_screen.dart
 
 class KopitanProfileScreen extends StatefulWidget {
   const KopitanProfileScreen({super.key});
@@ -124,12 +126,18 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: xsecondaryColor, // secondary color kamu
-                  padding:
-                      EdgeInsets
-                          .zero, // Biar padding kita atur sendiri di child
+                  backgroundColor: xsecondaryColor,
+                  padding: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -138,15 +146,15 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 14,
-                  ), // Tambah padding manual
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
+                    children: const [
+                      Text(
                         'Keluar',
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
-                      const Icon(
+                      Icon(
                         HugeIcons.strokeRoundedLogout01,
                         color: Colors.white,
                         size: 24,

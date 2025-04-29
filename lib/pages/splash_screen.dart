@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'onboarding_screen.dart';
 import 'admin_dashboard_screen.dart';
-import 'home_screen.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
+              MaterialPageRoute(builder: (_) => const KopitanAppMainScreen()),
             );
           }
         } catch (e) {
