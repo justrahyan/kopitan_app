@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kopitan_app/pages/app_main_screen.dart';
+import 'package:kopitan_app/pages/login_screen.dart';
 import 'package:kopitan_app/widgets/common_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -19,19 +19,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void initState() {
     super.initState();
 
-    // Initialize animation controller
     _controller = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     );
 
-    // Create offset animation for logo (from center to top)
     _logoOffsetAnimation = Tween<Offset>(
-      begin: const Offset(0, 0), // Center position
-      end: const Offset(0, -2.3), // Top position (adjust as needed)
+      begin: const Offset(0, 0),
+      end: const Offset(0, -2.3),
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    // Start animation after a short delay
     Future.delayed(const Duration(milliseconds: 300), () {
       _controller.forward();
     });
@@ -53,15 +50,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         width: size.width,
         child: Stack(
           children: [
-            // Background image
             SizedBox.expand(
               child: Image.asset(
                 "assets/images/splash_screen.png",
                 fit: BoxFit.cover,
               ),
             ),
-
-            // Animated logo
             Center(
               child: SlideTransition(
                 position: _logoOffsetAnimation,
@@ -72,8 +66,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
             ),
-
-            // Bottom content
             Positioned(
               bottom: 45,
               right: 0,
@@ -108,10 +100,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     CommonButton(
                       title: "Mulai Sekarang",
                       onTab: () {
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const KopitanAppMainScreen(),
+                            builder: (_) => const LoginScreen(),
                           ),
                         );
                       },

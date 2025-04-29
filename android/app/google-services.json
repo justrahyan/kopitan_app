@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "882588890018",
-    "project_id": "kopitan-app",
-    "storage_bucket": "kopitan-app.firebasestorage.app"
+    "project_number": "523126020762",
+    "project_id": "kopitan-e0633",
+    "storage_bucket": "kopitan-e0633.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:882588890018:android:159af4cb19450605c3f8fb",
+        "mobilesdk_app_id": "1:523126020762:android:0b93830c4c2078d3551d23",
         "android_client_info": {
           "package_name": "com.example.kopitan_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDKTmd7uFVPfRsrD3Vf6QXQMlq5haQ4k1c"
+          "current_key": "AIzaSyA9hzcOyEy8LUy5XS1Xh3aMwvtI6XqV2Vo"
         }
       ],
       "services": {

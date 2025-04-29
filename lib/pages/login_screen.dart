@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
 import 'package:kopitan_app/pages/auth_service.dart';
+import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
 import 'package:kopitan_app/pages/home_screen.dart';
-// import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
-import 'package:kopitan_app/pages/register_screen.dart'; // <-- Import register
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kopitan_app/pages/register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -17,9 +16,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _rememberMe = false;
-
   final AuthService _authService = AuthService();
+  bool _rememberMe = false;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 .collection('users')
                 .doc(user.uid)
                 .get();
+
         String role = userDoc.get('role');
 
         if (role == 'admin') {
@@ -157,25 +156,24 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
+          );
         }
-        //  else {
-        //   Navigator.pushReplacement(
-        //     context,
-        //     MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
-        //   );
-        // }
       } catch (e) {
-        print('Error reading Firestore: $e');
+        print('Firestore error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Terjadi kesalahan saat mengambil data user.'),
+            content: Text('Gagal mengambil data user dari database.'),
           ),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login Gagal! Periksa email dan password.'),
+          content: Text('Login gagal. Periksa email dan password.'),
         ),
       );
     }

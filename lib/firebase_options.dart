@@ -3,12 +3,14 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
-
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+// ...
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
 /// ```dart
-/// import 'firebase_options.dart';
+
 /// // ...
 /// await Firebase.initializeApp(
 ///   options: DefaultFirebaseOptions.currentPlatform,
@@ -41,48 +43,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCQZ8fUzlZrumhao0HKt_Rx1Ntfp5c7Bmo',
-    appId: '1:882588890018:web:ed3c4fd5951a9450c3f8fb',
-    messagingSenderId: '882588890018',
-    projectId: 'kopitan-app',
-    authDomain: 'kopitan-app.firebaseapp.com',
-    storageBucket: 'kopitan-app.firebasestorage.app',
-    measurementId: 'G-LH9SS8BL81',
+    apiKey: 'AIzaSyA6X6Qu9NxlqMHLExhMOgxzqCY7PDwu7gg',
+    appId: '1:523126020762:web:31c435cee228c023551d23',
+    messagingSenderId: '523126020762',
+    projectId: 'kopitan-e0633',
+    authDomain: 'kopitan-e0633.firebaseapp.com',
+    storageBucket: 'kopitan-e0633.firebasestorage.app',
+    measurementId: 'G-FZ4LSFGN5X',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDKTmd7uFVPfRsrD3Vf6QXQMlq5haQ4k1c',
-    appId: '1:882588890018:android:159af4cb19450605c3f8fb',
-    messagingSenderId: '882588890018',
-    projectId: 'kopitan-app',
-    storageBucket: 'kopitan-app.firebasestorage.app',
+    apiKey: 'AIzaSyA9hzcOyEy8LUy5XS1Xh3aMwvtI6XqV2Vo',
+    appId: '1:523126020762:android:0b93830c4c2078d3551d23',
+    messagingSenderId: '523126020762',
+    projectId: 'kopitan-e0633',
+    storageBucket: 'kopitan-e0633.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCJBHCuUS4P64zUdpjeR4do1xkBDJ8aqtg',
-    appId: '1:882588890018:ios:5368ccb4f6537d9fc3f8fb',
-    messagingSenderId: '882588890018',
-    projectId: 'kopitan-app',
-    storageBucket: 'kopitan-app.firebasestorage.app',
+    apiKey: 'AIzaSyDg1ZfOoXf9sKd4PyJsRWXOpC4hmms6W1g',
+    appId: '1:523126020762:ios:bced4a768ee24aef551d23',
+    messagingSenderId: '523126020762',
+    projectId: 'kopitan-e0633',
+    storageBucket: 'kopitan-e0633.firebasestorage.app',
     iosBundleId: 'com.example.kopitanApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCJBHCuUS4P64zUdpjeR4do1xkBDJ8aqtg',
-    appId: '1:882588890018:ios:5368ccb4f6537d9fc3f8fb',
-    messagingSenderId: '882588890018',
-    projectId: 'kopitan-app',
-    storageBucket: 'kopitan-app.firebasestorage.app',
+    apiKey: 'AIzaSyDg1ZfOoXf9sKd4PyJsRWXOpC4hmms6W1g',
+    appId: '1:523126020762:ios:bced4a768ee24aef551d23',
+    messagingSenderId: '523126020762',
+    projectId: 'kopitan-e0633',
+    storageBucket: 'kopitan-e0633.firebasestorage.app',
     iosBundleId: 'com.example.kopitanApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCQZ8fUzlZrumhao0HKt_Rx1Ntfp5c7Bmo',
-    appId: '1:882588890018:web:f61d2d1b830eb92bc3f8fb',
-    messagingSenderId: '882588890018',
-    projectId: 'kopitan-app',
-    authDomain: 'kopitan-app.firebaseapp.com',
-    storageBucket: 'kopitan-app.firebasestorage.app',
-    measurementId: 'G-CJT1DQX1CS',
+    apiKey: 'AIzaSyA6X6Qu9NxlqMHLExhMOgxzqCY7PDwu7gg',
+    appId: '1:523126020762:web:82d947ef88851de1551d23',
+    messagingSenderId: '523126020762',
+    projectId: 'kopitan-e0633',
+    authDomain: 'kopitan-e0633.firebaseapp.com',
+    storageBucket: 'kopitan-e0633.firebasestorage.app',
+    measurementId: 'G-Z8JJJ2XGB5',
   );
 }
