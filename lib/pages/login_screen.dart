@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/auth_service.dart';
 import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
-import 'package:kopitan_app/pages/home_screen.dart';
 import 'package:kopitan_app/pages/register_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const KopitanHomeScreen()),
+            MaterialPageRoute(builder: (_) => const KopitanAppMainScreen()),
           );
         }
       } catch (e) {
