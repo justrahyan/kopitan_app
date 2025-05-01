@@ -9,11 +9,11 @@ class MenuDetailPage extends StatefulWidget {
   final String imagePath;
 
   const MenuDetailPage({
-    Key? key,
+    super.key,
     required this.name,
     required this.price,
     required this.imagePath,
-  }) : super(key: key);
+  });
 
   @override
   State<MenuDetailPage> createState() => _MenuDetailPageState();
@@ -196,7 +196,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        Container(
+                        SizedBox(
                           width: 40,
                           height: 40,
                           child: IconButton(
@@ -226,7 +226,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
-                        Container(
+                        SizedBox(
                           width: 40,
                           height: 40,
                           child: IconButton(
@@ -292,10 +292,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
   Widget _buildTempOption(String temp, double width) {
     bool isSelected = selectedTemp == temp;
     String imagePath =
-        'assets/images/' +
-        (temp == 'Dingin'
-            ? (isSelected ? 'ice-active.png' : 'ice-unactive.png')
-            : (isSelected ? 'hot-active.png' : 'hot-unactive.png'));
+        'assets/images/${temp == 'Dingin' ? (isSelected ? 'ice-active.png' : 'ice-unactive.png') : (isSelected ? 'hot-active.png' : 'hot-unactive.png')}';
 
     return GestureDetector(
       onTap: () {
