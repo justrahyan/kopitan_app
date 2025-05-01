@@ -5,6 +5,7 @@ import 'package:kopitan_app/pages/register_screen.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart'; // <- ini bottom nav utama
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

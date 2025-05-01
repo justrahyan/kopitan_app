@@ -44,7 +44,6 @@ dependencies:
   heroicons: ^0.11.0
   enefty_icons: ^1.0.8
   intl: ^0.18.1
-  provider: ^6.1.4
 
 dev_dependencies:
   flutter_test:
