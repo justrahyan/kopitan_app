@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MenuDetailPage extends StatefulWidget {
   final String name;
@@ -9,19 +11,19 @@ class MenuDetailPage extends StatefulWidget {
   final String imagePath;
 
   const MenuDetailPage({
-    Key? key,
+    super.key,
     required this.name,
     required this.price,
     required this.imagePath,
-  }) : super(key: key);
+  });
 
   @override
   State<MenuDetailPage> createState() => _MenuDetailPageState();
 }
 
 class _MenuDetailPageState extends State<MenuDetailPage> {
-  String selectedTemp = 'Dingin'; // Default
-  String selectedSize = 'Sedang'; // Default
+  String selectedTemp = 'Dingin';
+  String selectedSize = 'Sedang';
   int quantity = 1;
 
   int get priceInt => int.parse(widget.price.replaceAll(RegExp(r'[^0-9]'), ''));
@@ -29,46 +31,48 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
   @override
   Widget build(BuildContext context) {
     int totalPrice = priceInt * quantity;
-    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // Image and Back Button
             Stack(
               children: [
-                Image.asset(
-                  widget.imagePath,
-                  width: double.infinity,
-                  height: 350,
-                  fit: BoxFit.cover,
-                ),
+                widget.imagePath.startsWith('http')
+                    ? Image.network(
+                      widget.imagePath,
+                      width: double.infinity,
+                      height: 350,
+                      fit: BoxFit.cover,
+                    )
+                    : Image.asset(
+                      widget.imagePath,
+                      width: double.infinity,
+                      height: 350,
+                      fit: BoxFit.cover,
+                    ),
                 Positioned(
                   top: 10,
                   left: 10,
                   child: Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.arrow_back, color: Colors.black),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
                 ),
               ],
             ),
-
-            // Product Info
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name and Price - side by side
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -77,13 +81,13 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                         children: [
                           Text(
                             widget.name,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
+                          const SizedBox(height: 4),
+                          const Text(
                             'Gula Aren',
                             style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
@@ -91,223 +95,73 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                       ),
                       Text(
                         'Rp. ${widget.price}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-
-                  SizedBox(height: 30),
-
-                  // === Suhu ===
+                  const SizedBox(height: 30),
+                  _buildSectionLabel("Suhu", "pilih 1"),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      Text(
-                        'Suhu',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'pilih 1',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
+                      Expanded(child: _buildTempOption('Dingin')),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildTempOption('Panas')),
                     ],
                   ),
-
-                  SizedBox(height: 16),
-
-                  // Temperature options in a row with proper width
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTempOption('Dingin', double.infinity),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: _buildTempOption('Panas', double.infinity),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 30),
-
-                  // === Ukuran ===
-                  Row(
-                    children: [
-                      Text(
-                        'Ukuran',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'pilih 1',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 16),
-
-                  // Size options in a row
+                  const SizedBox(height: 30),
+                  _buildSectionLabel("Ukuran", "pilih 1"),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       _buildSizeOption('Kecil'),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       _buildSizeOption('Sedang'),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       _buildSizeOption('Besar'),
                     ],
                   ),
                 ],
               ),
             ),
-
-            // Push everything up to make room for the bottom controls
-            Spacer(),
-
-            // === Bottom Quantity and Order Button ===
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Quantity selector
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          child: IconButton(
-                            icon: Icon(Icons.remove, size: 20),
-                            onPressed: () {
-                              if (quantity > 1) {
-                                setState(() {
-                                  quantity--;
-                                });
-                              }
-                            },
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              left: BorderSide(color: Colors.grey.shade300),
-                              right: BorderSide(color: Colors.grey.shade300),
-                            ),
-                          ),
-                          child: Text(
-                            quantity.toString(),
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        Container(
-                          width: 40,
-                          height: 40,
-                          child: IconButton(
-                            icon: Icon(Icons.add, size: 20),
-                            onPressed: () {
-                              setState(() {
-                                quantity++;
-                              });
-                            },
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(width: 15),
-
-                  // Order button - expand to fill remaining space
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        final orderData = {
-                          'name': widget.name,
-                          'price': priceInt,
-                          'totalPrice': priceInt * quantity,
-                          'quantity': quantity,
-                          'imagePath': widget.imagePath,
-                          'temperature': selectedTemp,
-                          'size': selectedSize,
-                        };
-
-                        Navigator.pop(context, orderData);
-                      },
-
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: xprimaryColor,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: Icon(
-                        HugeIcons.strokeRoundedShoppingCartAdd01,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      label: Text(
-                        'Rp. ${NumberFormat('#,###', 'id_ID').format(totalPrice)}',
-                        style: TextStyle(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const Spacer(),
+            _buildBottomBar(totalPrice),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTempOption(String temp, double width) {
+  Widget _buildSectionLabel(String title, String subtitle) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTempOption(String temp) {
     bool isSelected = selectedTemp == temp;
     String imagePath =
-        'assets/images/' +
-        (temp == 'Dingin'
-            ? (isSelected ? 'ice-active.png' : 'ice-unactive.png')
-            : (isSelected ? 'hot-active.png' : 'hot-unactive.png'));
+        'assets/images/${temp == 'Dingin' ? (isSelected ? 'ice-active.png' : 'ice-unactive.png') : (isSelected ? 'hot-active.png' : 'hot-unactive.png')}';
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedTemp = temp;
-        });
-      },
+      onTap: () => setState(() => selectedTemp = temp),
       child: Container(
-        width: width,
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Color(0xfff3f3f3),
+          color: isSelected ? Colors.white : const Color(0xfff3f3f3),
           border: Border.all(
             color: isSelected ? xprimaryColor : Colors.transparent,
             width: isSelected ? 2 : 1,
@@ -315,14 +169,12 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
-          // <--- ubah jadi Column
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(imagePath, width: 35, height: 35),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               temp,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -335,15 +187,11 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedSize = size;
-          });
-        },
+        onTap: () => setState(() => selectedSize = size),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Color(0xfff3f3f3),
+            color: isSelected ? Colors.white : const Color(0xfff3f3f3),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSelected ? xprimaryColor : Colors.transparent,
@@ -363,5 +211,113 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildBottomBar(int totalPrice) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Quantity
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                _buildQtyButton(Icons.remove, () {
+                  if (quantity > 1) setState(() => quantity--);
+                }),
+                Container(
+                  width: 40,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$quantity',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                _buildQtyButton(Icons.add, () => setState(() => quantity++)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 15),
+          // Button
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _submitOrder,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: xprimaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(
+                HugeIcons.strokeRoundedShoppingCartAdd01,
+                color: Colors.white,
+              ),
+              label: Text(
+                'Rp. ${NumberFormat('#,###', 'id_ID').format(totalPrice)}',
+                style: const TextStyle(fontSize: 18, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQtyButton(IconData icon, VoidCallback onTap) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        icon: Icon(icon, size: 20),
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
+
+  Future<void> _submitOrder() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login terlebih dahulu')),
+      );
+      return;
+    }
+
+    final order = {
+      'userId': user.uid,
+      'name': widget.name,
+      'price': priceInt,
+      'quantity': quantity,
+      'totalPrice': priceInt * quantity,
+      'temperature': selectedTemp,
+      'size': selectedSize,
+      'imagePath': widget.imagePath,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await FirebaseFirestore.instance.collection('orders').add(order);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pesanan berhasil ditambahkan')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan pesanan: $e')));
+    }
   }
 }

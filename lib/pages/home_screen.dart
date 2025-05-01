@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kopitan_app/colors.dart';
-import 'package:kopitan_app/pages/menu_detail_screen.dart';
 import 'package:kopitan_app/models/menu_item_model.dart';
+import 'package:kopitan_app/pages/menu_detail_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kopitan_app/pages/profile_screen.dart';
 
 class KopitanHomeScreen extends StatefulWidget {
   const KopitanHomeScreen({super.key});
@@ -15,14 +16,15 @@ class KopitanHomeScreen extends StatefulWidget {
 
 class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
   String userName = "";
+  String? userAddress;
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadUserData();
   }
 
-  Future<void> _loadUserName() async {
+  Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final doc =
@@ -30,9 +32,10 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
               .collection('users')
               .doc(user.uid)
               .get();
-      if (doc.exists) {
+      if (doc.exists && mounted) {
         setState(() {
           userName = doc['full_name'];
+          userAddress = doc.data()?['address'];
         });
       }
     }
@@ -93,13 +96,32 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        "Jl. Perintis Kemerdekaan No.18 Sulawesi Selatan",
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const KopitanProfileScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          userAddress?.isNotEmpty == true
+                              ? userAddress!
+                              : "Tambahkan alamat",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color:
+                                userAddress?.isNotEmpty == true
+                                    ? Colors.grey
+                                    : Colors.red,
+                            fontStyle:
+                                userAddress?.isNotEmpty == true
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
