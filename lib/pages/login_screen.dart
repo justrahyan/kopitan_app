@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/auth_service.dart';
 import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
 import 'package:kopitan_app/pages/register_screen.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart'; // <- ini bottom nav utama
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kopitan_app/pages/app_main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -136,10 +136,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    User? user = await _authService.loginUser(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email dan kata sandi harus diisi.')),
+      );
+      return;
+    }
+
+    User? user = await _authService.loginUser(email, password);
 
     if (user != null) {
       try {
@@ -173,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login gagal. Periksa email dan password.'),
+          content: Text('Login gagal. Periksa email dan kata sandi.'),
         ),
       );
     }

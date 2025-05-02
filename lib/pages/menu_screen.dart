@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kopitan_app/colors.dart';
+import 'package:kopitan_app/models/menu_item_model.dart';
 import 'package:kopitan_app/pages/menu_detail_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class KopitanMenuScreen extends StatefulWidget {
   const KopitanMenuScreen({super.key});
@@ -10,132 +13,57 @@ class KopitanMenuScreen extends StatefulWidget {
 }
 
 class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
-  final ScrollController _scrollController = ScrollController();
-  final GlobalKey _coffeeKey = GlobalKey();
-  final GlobalKey _nonCoffeeKey = GlobalKey();
-  final GlobalKey _freezyKey = GlobalKey();
-
   String selectedCategory = 'Coffee';
+  String userName = "";
+  String userAddress = "";
+  final List<String> categories = ['Coffee', 'Non Coffee', 'Freezy'];
 
-  void scrollToSection(GlobalKey key) {
-    Scrollable.ensureVisible(
-      key.currentContext!,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+      if (doc.exists && mounted) {
+        setState(() {
+          userName = doc['full_name'] ?? '';
+          userAddress =
+              doc.data()!.containsKey('address') ? doc['address'] : '';
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  _buildUserInfo(),
-                  const SizedBox(height: 20),
-                ],
-              ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildUserInfo(),
             ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyCategoryTabs(
-              child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.only(top: 40, left: 15, right: 15),
-                child: _buildCategoryTabs(),
-              ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildCategoryTabs(),
             ),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 20)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: _buildSectionTitle('Coffee', key: _coffeeKey),
-            ),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            sliver: _buildMenuGrid([
-              _buildCoffeeItem(
-                'Gula Aren',
-                'Rp. 15.000',
-                'assets/images/menu/menu-1.jpg',
-              ),
-              _buildCoffeeItem(
-                'Americano',
-                'Rp. 15.000',
-                'assets/images/menu/menu-2.jpg',
-              ),
-              _buildCoffeeItem(
-                'Latte',
-                'Rp. 18.000',
-                'assets/images/menu/menu-3.jpg',
-              ),
-            ]),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 40)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: _buildSectionTitle('Non Coffee', key: _nonCoffeeKey),
-            ),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            sliver: _buildMenuGrid([
-              _buildCoffeeItem(
-                'Berry Smoothie',
-                'Rp. 20.000',
-                'assets/images/menu/menu-4.jpg',
-              ),
-              _buildCoffeeItem(
-                'Mango Juice',
-                'Rp. 18.000',
-                'assets/images/menu/menu-5.jpg',
-              ),
-              _buildCoffeeItem(
-                'Chocolate',
-                'Rp. 20.000',
-                'assets/images/menu/menu-6.jpg',
-              ),
-            ]),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 40)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: _buildSectionTitle('Freezy', key: _freezyKey),
-            ),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 12)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            sliver: _buildMenuGrid([
-              _buildCoffeeItem(
-                'Freezy Choco',
-                'Rp. 22.000',
-                'assets/images/menu/menu-7.jpg',
-              ),
-              _buildCoffeeItem(
-                'Freezy Strawberry',
-                'Rp. 22.000',
-                'assets/images/menu/menu-8.jpg',
-              ),
-            ]),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 40)),
-        ],
+            const SizedBox(height: 16),
+            Expanded(child: _buildMenuByCategory(selectedCategory)),
+          ],
+        ),
       ),
     );
   }
@@ -145,21 +73,33 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        border: Border.all(color: Colors.black, width: 1),
+        color: const Color.fromARGB(255, 209, 132, 77),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            'Muhammad Rahyan Noorfauzan',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            userName.isEmpty ? 'Loading...' : userName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
-          SizedBox(height: 4),
-          Text(
-            'Jl. Perintis Kemerdekaan No.18 Sulawesi Selatan, Indonesia',
-            style: TextStyle(color: Colors.grey),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, '/profile');
+            },
+            child: Text(
+              userAddress.isNotEmpty ? userAddress : 'Tambahkan alamat',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                decoration: TextDecoration.underline,
+              ),
+            ),
           ),
         ],
       ),
@@ -167,10 +107,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
   }
 
   Widget _buildCategoryTabs() {
-    List<String> categories = ['Coffee', 'Non Coffee', 'Freezy'];
-
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
       children:
           categories.map((category) {
             final isSelected = selectedCategory == category;
@@ -179,14 +116,6 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
                 setState(() {
                   selectedCategory = category;
                 });
-
-                if (category == 'Coffee') {
-                  scrollToSection(_coffeeKey);
-                } else if (category == 'Non Coffee') {
-                  scrollToSection(_nonCoffeeKey);
-                } else if (category == 'Freezy') {
-                  scrollToSection(_freezyKey);
-                }
               },
               child: Padding(
                 padding: const EdgeInsets.only(right: 20),
@@ -196,8 +125,8 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
                       category,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? xprimaryColor : Colors.grey,
                         fontSize: 16,
+                        color: isSelected ? xprimaryColor : Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -211,113 +140,110 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, {required GlobalKey key}) {
-    return Container(
-      key: key,
-      child: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
-    );
-  }
+  Widget _buildMenuByCategory(String category) {
+    return StreamBuilder<QuerySnapshot>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('menus')
+              .where('category', isEqualTo: category)
+              .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-  SliverGrid _buildMenuGrid(List<Widget> items) {
-    return SliverGrid(
-      delegate: SliverChildListDelegate(items),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-    );
-  }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("Menu tidak tersedia"));
+        }
 
-  Widget _buildCoffeeItem(String name, String price, String imagePath) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => MenuDetailPage(
-                  name: name,
-                  price: price,
-                  imagePath: imagePath,
+        final menuList =
+            snapshot.data!.docs.map((doc) {
+              return MenuItemModel.fromFirestore(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              );
+            }).toList();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            itemCount: menuList.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, index) {
+              final menu = menuList[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => MenuDetailPage(
+                            name: menu.name,
+                            price: 'Rp. ${menu.price}',
+                            imagePath: menu.imageUrl,
+                          ),
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                          child:
+                              menu.imageUrl.startsWith('http')
+                                  ? Image.network(
+                                    menu.imageUrl,
+                                    fit: BoxFit.cover,
+                                  )
+                                  : Image.asset(
+                                    menu.imageUrl,
+                                    fit: BoxFit.cover,
+                                  ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              menu.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Rp. ${menu.price}",
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              );
+            },
           ),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(8),
-                ),
-                child: Image.asset(imagePath, fit: BoxFit.contain),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      price,
-                      style: const TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
-  }
-}
-
-// Sticky Header Class
-class _StickyCategoryTabs extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _StickyCategoryTabs({required this.child});
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return child;
-  }
-
-  @override
-  double get maxExtent => 80;
-
-  @override
-  double get minExtent => 80;
-
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
-    return true;
   }
 }
