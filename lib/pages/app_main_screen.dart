@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/colors.dart';
-import 'package:kopitan_app/models/icon_model.dart';
 import 'package:kopitan_app/pages/home_screen.dart';
 import 'package:kopitan_app/pages/menu_screen.dart';
 import 'package:kopitan_app/pages/order_screen.dart';
 import 'package:kopitan_app/pages/profile_screen.dart';
+
+// GlobalKey untuk mengakses KopitanMenuScreenState
+final GlobalKey<KopitanMenuScreenState> menuScreenKey = GlobalKey();
 
 class KopitanAppMainScreen extends StatefulWidget {
   const KopitanAppMainScreen({super.key});
@@ -15,23 +17,57 @@ class KopitanAppMainScreen extends StatefulWidget {
 
 class KopitanAppMainScreenState extends State<KopitanAppMainScreen> {
   int indexMenu = 0;
-  final List<Widget> _screens = [
-    const KopitanHomeScreen(),
-    const KopitanMenuScreen(),
-    const KopitanOrderScreen(),
-    const KopitanProfileScreen(),
+
+  final List<Map<String, dynamic>> menu = [
+    {
+      'iconActive': 'assets/images/home-primary.png',
+      'iconInactive': 'assets/images/home-secondary.png',
+      'screen': const KopitanHomeScreen(),
+    },
+    {
+      'iconActive': 'assets/images/drink-primary.png',
+      'iconInactive': 'assets/images/drink-secondary.png',
+      'screen': KopitanMenuScreen(key: menuScreenKey),
+    },
+    {
+      'iconActive': 'assets/images/receipt-primary.png',
+      'iconInactive': 'assets/images/receipt-secondary.png',
+      'screen': const KopitanOrderScreen(),
+    },
+    {
+      'iconActive': 'assets/images/user-primary.png',
+      'iconInactive': 'assets/images/user-secondary.png',
+      'screen': const KopitanProfileScreen(),
+    },
   ];
+
+  /// Untuk pindah tab (misalnya dari tombol "Semua")
+  void switchToMenuTab(String category) {
+    setState(() {
+      indexMenu = 1;
+    });
+    menuScreenKey.currentState?.setCategory(category);
+  }
+
+  /// Untuk pindah tab biasa (misalnya saat klik alamat)
+  void switchToTab(int index) {
+    setState(() {
+      indexMenu = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[indexMenu],
+      body: menu[indexMenu]['screen'],
       backgroundColor: Colors.white,
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         child: Row(
           children: List.generate(menu.length, (index) {
-            Map items = menu[index];
             bool isActive = index == indexMenu;
+            final item = menu[index];
+
             return Expanded(
               child: InkWell(
                 onTap: () {
@@ -44,13 +80,13 @@ class KopitanAppMainScreenState extends State<KopitanAppMainScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Image.asset(
-                        isActive ? items['iconActive'] : items['iconInactive'],
+                        isActive ? item['iconActive'] : item['iconInactive'],
                         width: 32,
                         height: 32,
                       ),
-                      if (isActive) SizedBox(height: 7),
+                      if (isActive) const SizedBox(height: 7),
                       if (isActive)
                         Container(
                           height: 5,

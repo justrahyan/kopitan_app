@@ -1,27 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/models/menu_item_model.dart';
 import 'package:kopitan_app/pages/menu_detail_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kopitan_app/widgets/order_bar_widget.dart';
 
 class KopitanMenuScreen extends StatefulWidget {
-  const KopitanMenuScreen({super.key});
+  const KopitanMenuScreen({super.key, this.initialCategory});
+
+  final String? initialCategory;
 
   @override
-  State<KopitanMenuScreen> createState() => _KopitanMenuScreenState();
+  KopitanMenuScreenState createState() => KopitanMenuScreenState();
 }
 
-class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
+class KopitanMenuScreenState extends State<KopitanMenuScreen> {
   String selectedCategory = 'Coffee';
   String userName = "";
   String userAddress = "";
+
   final List<String> categories = ['Coffee', 'Non Coffee', 'Freezy'];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    if (widget.initialCategory != null) {
+      selectedCategory = widget.initialCategory!;
+    }
+  }
+
+  void setCategory(String category) {
+    setState(() {
+      selectedCategory = category;
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -48,20 +61,36 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildUserInfo(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildUserInfo(),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildCategoryTabs(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMenuByCategory(selectedCategory),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildCategoryTabs(),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: const OrderBarWidget(),
+              ),
             ),
-            const SizedBox(height: 16),
-            Expanded(child: _buildMenuByCategory(selectedCategory)),
           ],
         ),
       ),
@@ -73,7 +102,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 209, 132, 77),
+        color: xprimaryColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -89,15 +118,13 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
           ),
           const SizedBox(height: 4),
           GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(context, '/profile');
-            },
+            onTap: () => Navigator.pushNamed(context, '/profile'),
             child: Text(
               userAddress.isNotEmpty ? userAddress : 'Tambahkan alamat',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
-                decoration: TextDecoration.underline,
+                decoration: TextDecoration.none, // Hindari garis bawah
               ),
             ),
           ),
@@ -112,11 +139,7 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
           categories.map((category) {
             final isSelected = selectedCategory == category;
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedCategory = category;
-                });
-              },
+              onTap: () => setState(() => selectedCategory = category),
               child: Padding(
                 padding: const EdgeInsets.only(right: 20),
                 child: Column(
@@ -167,6 +190,8 @@ class _KopitanMenuScreenState extends State<KopitanMenuScreen> {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: menuList.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
