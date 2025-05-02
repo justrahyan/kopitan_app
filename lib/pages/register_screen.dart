@@ -30,7 +30,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                Image.asset('assets/logo_kopitan.png', width: 80, height: 80),
+                Image.asset(
+                  'assets/images/logo-kopitan-primary.png',
+                  width: 80,
+                  height: 80,
+                ),
                 const SizedBox(height: 24),
                 const Text(
                   'Buat Akun',
