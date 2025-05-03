@@ -28,6 +28,24 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
   int get priceInt => int.parse(widget.price.replaceAll(RegExp(r'[^0-9]'), ''));
 
+  int getAdjustedPrice() {
+    int adjustedPrice = priceInt;
+
+    // Penyesuaian berdasarkan suhu
+    if (selectedTemp == 'Panas') {
+      adjustedPrice += 2000;
+    }
+
+    // Penyesuaian berdasarkan ukuran
+    if (selectedSize == 'Kecil') {
+      adjustedPrice -= 2000;
+    } else if (selectedSize == 'Besar') {
+      adjustedPrice += 3000;
+    }
+
+    return adjustedPrice;
+  }
+
   final currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp. ',
@@ -36,7 +54,8 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    int totalPrice = priceInt * quantity;
+    final screenWidth = MediaQuery.of(context).size.width;
+    int totalPrice = getAdjustedPrice() * quantity;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -59,7 +78,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                 return Image.asset(
                                   'assets/images/no-image.png',
                                   width: double.infinity,
-                                  height: 300,
+                                  height: 280,
                                   fit: BoxFit.cover,
                                 );
                               },
@@ -67,7 +86,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                             : Image.asset(
                               widget.imagePath,
                               width: double.infinity,
-                              height: 300,
+                              height: 280,
                               fit: BoxFit.cover,
                             ),
                         Positioned(
@@ -104,9 +123,11 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                     Text(
                                       widget.name,
                                       style: const TextStyle(
-                                        fontSize: 22,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      softWrap: true,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
                                     const Text(
@@ -122,7 +143,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                               Text(
                                 currencyFormat.format(priceInt),
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -168,12 +189,12 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(width: 8),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
       ],
     );
@@ -190,7 +211,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
         setState(() => selectedTemp = temp);
       },
       child: Container(
-        width: 120,
+        width: (MediaQuery.of(context).size.width - 52) / 2,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : const Color(0xfff3f3f3),
@@ -205,7 +226,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
           children: [
             Image.asset(imagePath, width: 30, height: 30),
             const SizedBox(height: 6),
-            Text(temp, style: const TextStyle(fontSize: 16)),
+            Text(temp, style: const TextStyle(fontSize: 14)),
           ],
         ),
       ),
@@ -214,6 +235,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
   Widget _buildSizeOption(String size) {
     bool isSelected = selectedSize == size;
+    double itemWidth = (MediaQuery.of(context).size.width - 64) / 3;
 
     return GestureDetector(
       onTap: () {
@@ -221,7 +243,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
         setState(() => selectedSize = size);
       },
       child: Container(
-        width: 90,
+        width: itemWidth,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : const Color(0xfff3f3f3),
@@ -237,6 +259,7 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: isSelected ? Colors.black : Colors.black87,
+              fontSize: 12,
             ),
           ),
         ),
@@ -282,7 +305,8 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
             ),
           ),
           const SizedBox(width: 16),
-          Expanded(
+          Flexible(
+            fit: FlexFit.tight,
             child: ElevatedButton.icon(
               onPressed: _submitOrder,
               icon: const Icon(
@@ -332,9 +356,9 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
     final order = {
       'userId': user.uid,
       'name': widget.name,
-      'price': priceInt,
+      'price': getAdjustedPrice(),
+      'totalPrice': getAdjustedPrice() * quantity,
       'quantity': quantity,
-      'totalPrice': priceInt * quantity,
       'temperature': selectedTemp,
       'size': selectedSize,
       'imagePath': widget.imagePath,

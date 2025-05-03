@@ -25,6 +25,90 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     _loadUserData();
   }
 
+  void _showEditAlamatSheet() {
+    _addressController.text = address;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: MediaQuery.of(context).viewInsets,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit Alamat',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _addressController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan alamat...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await _updateAddress();
+                          if (mounted) Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: xprimaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Simpan',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -191,17 +275,14 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
             HugeIcons.strokeRoundedLocation09,
             color: xprimaryColor,
           ),
-          title: TextField(
-            controller: _addressController,
-            decoration: const InputDecoration(
-              hintText: 'Tambahkan alamat...',
-              border: InputBorder.none,
+          title: Text(
+            address.isNotEmpty ? address : 'Tambahkan alamat...',
+            style: TextStyle(
+              color: address.isNotEmpty ? Colors.black : Colors.grey,
             ),
           ),
-          trailing: IconButton(
-            icon: Icon(Icons.save, color: xprimaryColor),
-            onPressed: _updateAddress,
-          ),
+          trailing: const Icon(HugeIcons.strokeRoundedEdit04),
+          onTap: _showEditAlamatSheet,
         ),
         const Divider(height: 1),
       ],

@@ -188,7 +188,7 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
             }).toList();
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.only(left: 16, right: 16),
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -197,7 +197,7 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 1,
+              childAspectRatio: 6 / 5,
             ),
             itemBuilder: (context, index) {
               final menu = menuList[index];
@@ -220,25 +220,28 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
                     borderRadius: BorderRadius.circular(8),
                     color: Colors.white,
                     boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                      BoxShadow(color: Colors.black12, blurRadius: 5),
                     ],
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(8),
+                            top: Radius.circular(5),
                           ),
                           child:
                               menu.imageUrl.startsWith('http')
                                   ? Image.network(
                                     menu.imageUrl,
                                     fit: BoxFit.cover,
+                                    width: double.infinity,
                                   )
                                   : Image.asset(
                                     menu.imageUrl,
                                     fit: BoxFit.cover,
+                                    width: double.infinity,
                                   ),
                         ),
                       ),
@@ -251,6 +254,7 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
                               menu.name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                             ),
                             const SizedBox(height: 4),

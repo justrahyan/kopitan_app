@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
+import '../pages/checkout_page.dart';
 
 class OrderBarWidget extends StatelessWidget {
   const OrderBarWidget({super.key});
@@ -33,14 +34,14 @@ class OrderBarWidget extends StatelessWidget {
 
         return Padding(
           padding: EdgeInsets.only(
-            bottom: bottomPadding > 0 ? bottomPadding : 12,
+            bottom: bottomPadding > 0 ? bottomPadding : 4,
           ),
           child: Material(
             elevation: 6,
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -61,7 +62,7 @@ class OrderBarWidget extends StatelessWidget {
                         'Rp ${NumberFormat('#,###', 'id_ID').format(total)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 16,
                         ),
                       ),
                     ],
@@ -70,17 +71,16 @@ class OrderBarWidget extends StatelessWidget {
                   // Checkout Button
                   ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Fitur Check Out belum dibuat"),
-                        ),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CheckoutPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: xprimaryColor,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
+                        horizontal: 20,
+                        vertical: 12,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

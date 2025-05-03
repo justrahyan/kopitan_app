@@ -83,8 +83,8 @@ class KopitanAppMainScreenState extends State<KopitanAppMainScreen> {
                       const SizedBox(height: 20),
                       Image.asset(
                         isActive ? item['iconActive'] : item['iconInactive'],
-                        width: 32,
-                        height: 32,
+                        width: 26,
+                        height: 26,
                       ),
                       if (isActive) const SizedBox(height: 7),
                       if (isActive)

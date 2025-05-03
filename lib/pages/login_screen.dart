@@ -128,9 +128,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan kata sandi harus diisi.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email dan kata sandi harus diisi.')),
+        );
+      }
       return;
     }
 
@@ -145,37 +147,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 .get();
 
         if (!doc.exists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data pengguna tidak ditemukan.')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Data pengguna tidak ditemukan.')),
+            );
+          }
           return;
         }
 
         final role = doc.get('role');
 
-        if (role == 'admin') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const KopitanAppMainScreen()),
-          );
+        if (mounted) {
+          if (role == 'admin') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const KopitanAppMainScreen()),
+            );
+          }
         }
       } catch (e) {
-        print("Firestore error: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengambil data pengguna.')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal mengambil data pengguna.')),
+          );
+        }
+        // Log error using a logging framework or print for debugging in development only
+        debugPrint("Firestore error: $e");
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login gagal. Cek kembali email dan password.'),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login gagal. Cek kembali email dan password.'),
+          ),
+        );
+      }
     }
   }
 }

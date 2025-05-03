@@ -79,15 +79,16 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
 
   Widget _buildHeader() {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Image.asset(
           "assets/images/kopitan_banner.png",
-          height: 220,
+          height: 300,
           width: double.infinity,
           fit: BoxFit.cover,
         ),
         Positioned(
-          bottom: 0,
+          bottom: -20,
           left: 16,
           right: 16,
           child: Container(
@@ -114,12 +115,12 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                       const SizedBox(height: 4),
                       GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const KopitanProfileScreen(),
-                            ),
-                          );
+                          final mainState =
+                              context
+                                  .findAncestorStateOfType<
+                                    KopitanAppMainScreenState
+                                  >();
+                          mainState?.switchToTab(3);
                         },
                         child: Text(
                           userAddress?.isNotEmpty == true
@@ -166,7 +167,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
 
   Widget _buildCategorySection(String category) {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 24),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 36),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -231,7 +232,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 3 / 4,
+                  childAspectRatio: 6 / 5,
                 ),
                 itemBuilder: (context, index) {
                   final menu = menuList[index];
@@ -252,7 +253,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(color: Colors.black12, blurRadius: 5),
@@ -264,7 +265,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12),
+                                top: Radius.circular(5),
                               ),
                               child:
                                   menu.imageUrl.startsWith('http')
