@@ -5,7 +5,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Registrasi user dengan role default: "user"
+  /// Registrasi user dan simpan ke Firestore
   Future<User?> registerUser({
     required String fullName,
     required String username,
@@ -21,22 +21,32 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
-        // Simpan data user ke Firestore
-        await _firestore.collection('users').doc(user.uid).set({
+        final docRef = _firestore.collection('users').doc(user.uid);
+
+        await docRef.set({
           'full_name': fullName,
           'username': username,
           'email': email,
-          'role': 'user', // default role
+          'role': 'user',
           'created_at': FieldValue.serverTimestamp(),
         });
+
+        final checkDoc = await docRef.get();
+        if (checkDoc.exists) {
+          print(
+            '✅ Firestore: Data user berhasil disimpan untuk UID: ${user.uid}',
+          );
+        } else {
+          print('❌ Firestore: Data tidak ditemukan setelah penyimpanan.');
+        }
       }
 
       return user;
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuth Register Error: ${e.message}');
+      print('❌ FirebaseAuth Register Error: ${e.message}');
       return null;
     } catch (e) {
-      print('General Register Error: $e');
+      print('❌ General Register Error: $e');
       return null;
     }
   }
@@ -48,12 +58,13 @@ class AuthService {
         email: email,
         password: password,
       );
+      print('🟢 Login berhasil: ${result.user?.email}');
       return result.user;
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuth Login Error: ${e.message}');
+      print('❌ FirebaseAuth Login Error: ${e.message}');
       return null;
     } catch (e) {
-      print('General Login Error: $e');
+      print('❌ General Login Error: $e');
       return null;
     }
   }
@@ -63,7 +74,7 @@ class AuthService {
     await _auth.signOut();
   }
 
-  /// Cek user login saat ini
+  /// Get current user
   User? getCurrentUser() {
     return _auth.currentUser;
   }

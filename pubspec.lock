@@ -244,10 +244,10 @@ packages:
     dependency: "direct main"
     description:
       name: hugeicons
-      sha256: d7dd54ca1faf91b12a4b5eb9d2ce2bce3066dc0cae7209c0ddfc29e7bb48c045
+      sha256: cf172bae0c3ff2e2114324d05e79872081f4cd3c009f5979285fec73a693096a
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.10"
+    version: "0.0.11"
   intl:
     dependency: "direct main"
     description:

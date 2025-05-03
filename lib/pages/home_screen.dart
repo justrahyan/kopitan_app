@@ -3,9 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/models/menu_item_model.dart';
 import 'package:kopitan_app/pages/menu_detail_screen.dart';
+import 'package:kopitan_app/pages/profile_screen.dart';
+import 'package:kopitan_app/widgets/order_bar_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kopitan_app/pages/profile_screen.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart'; // <- penting
 
 class KopitanHomeScreen extends StatefulWidget {
   const KopitanHomeScreen({super.key});
@@ -46,16 +48,30 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildCategorySection("Coffee"),
-              _buildCategorySection("Non Coffee"),
-              _buildCategorySection("Freezy"),
-              const SizedBox(height: 20),
-            ],
-          ),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 100),
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    _buildCategorySection("Coffee"),
+                    _buildCategorySection("Non Coffee"),
+                    _buildCategorySection("Freezy"),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: const OrderBarWidget(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -135,7 +151,10 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text("Order"),
+                  child: const Text(
+                    "Order",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -151,6 +170,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header kategori + tombol "Semua"
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -161,11 +181,19 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                   fontSize: 18,
                 ),
               ),
-              const Text(
-                "Semua",
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
+              GestureDetector(
+                onTap: () {
+                  final mainState =
+                      context
+                          .findAncestorStateOfType<KopitanAppMainScreenState>();
+                  mainState?.switchToMenuTab(category);
+                },
+                child: const Text(
+                  "Semua",
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -176,6 +204,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                 FirebaseFirestore.instance
                     .collection('menus')
                     .where('category', isEqualTo: category)
+                    .limit(4)
                     .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -186,7 +215,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                 return const Text("Menu tidak tersedia");
               }
 
-              final List<MenuItemModel> menuList =
+              final menuList =
                   snapshot.data!.docs.map((doc) {
                     return MenuItemModel.fromFirestore(
                       doc.data() as Map<String, dynamic>,
@@ -196,8 +225,8 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
 
               return GridView.builder(
                 shrinkWrap: true,
-                itemCount: menuList.length,
                 physics: const NeverScrollableScrollPhysics(),
+                itemCount: menuList.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
@@ -207,8 +236,8 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                 itemBuilder: (context, index) {
                   final menu = menuList[index];
                   return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder:
@@ -219,6 +248,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                               ),
                         ),
                       );
+                      if (result == true) setState(() {});
                     },
                     child: Container(
                       decoration: BoxDecoration(

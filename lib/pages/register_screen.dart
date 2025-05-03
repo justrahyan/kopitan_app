@@ -15,7 +15,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   bool _agreeTerms = false;
+  bool _obscurePassword = true;
 
   final AuthService _authService = AuthService();
 
@@ -47,11 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 _buildTextField(_emailController, 'Email'),
                 const SizedBox(height: 16),
-                _buildTextField(
-                  _passwordController,
-                  'Kata Sandi',
-                  obscureText: true,
-                ),
+                _buildPasswordField(), // Gunakan password field khusus
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -128,6 +126,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: _passwordController,
+      obscureText: _obscurePassword,
+      decoration: InputDecoration(
+        labelText: 'Kata Sandi',
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
       ),
     );
   }

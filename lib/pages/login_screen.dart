@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/auth_service.dart';
 import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
 import 'package:kopitan_app/pages/register_screen.dart';
-import 'package:kopitan_app/pages/app_main_screen.dart'; // <- ini bottom nav utama
+import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -17,7 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  bool _rememberMe = false;
+
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -46,36 +47,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildTextField(
                   _passwordController,
                   'Kata Sandi',
-                  obscureText: true,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          activeColor: const Color(0xFFB87544),
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _rememberMe = value ?? false;
-                            });
-                          },
-                        ),
-                        const Text('Ingat Saya'),
-                      ],
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'Lupa Sandi?',
-                        style: TextStyle(color: Color(0xFFB87544)),
-                      ),
-                    ),
-                  ],
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -122,12 +108,14 @@ class _LoginScreenState extends State<LoginScreen> {
     TextEditingController controller,
     String label, {
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -150,13 +138,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (user != null) {
       try {
-        DocumentSnapshot userDoc =
+        final doc =
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .get();
 
-        String role = userDoc.get('role');
+        if (!doc.exists) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Data pengguna tidak ditemukan.')),
+          );
+          return;
+        }
+
+        final role = doc.get('role');
 
         if (role == 'admin') {
           Navigator.pushReplacement(
@@ -170,17 +165,15 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } catch (e) {
-        print('Firestore error: $e');
+        print("Firestore error: $e");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengambil data user dari database.'),
-          ),
+          const SnackBar(content: Text('Gagal mengambil data pengguna.')),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login gagal. Periksa email dan kata sandi.'),
+          content: Text('Login gagal. Cek kembali email dan password.'),
         ),
       );
     }

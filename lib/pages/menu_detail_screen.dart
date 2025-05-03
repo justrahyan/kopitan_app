@@ -28,6 +28,12 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
   int get priceInt => int.parse(widget.price.replaceAll(RegExp(r'[^0-9]'), ''));
 
+  final currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp. ',
+    decimalDigits: 0,
+  );
+
   @override
   Widget build(BuildContext context) {
     int totalPrice = priceInt * quantity;
@@ -37,98 +43,120 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
       body: SafeArea(
         child: Column(
           children: [
-            Stack(
-              children: [
-                widget.imagePath.startsWith('http')
-                    ? Image.network(
-                      widget.imagePath,
-                      width: double.infinity,
-                      height: 350,
-                      fit: BoxFit.cover,
-                    )
-                    : Image.asset(
-                      widget.imagePath,
-                      width: double.infinity,
-                      height: 350,
-                      fit: BoxFit.cover,
-                    ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.name,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        widget.imagePath.startsWith('http')
+                            ? Image.network(
+                              widget.imagePath,
+                              width: double.infinity,
+                              height: 300,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Image.asset(
+                                  'assets/images/no-image.png',
+                                  width: double.infinity,
+                                  height: 300,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            )
+                            : Image.asset(
+                              widget.imagePath,
+                              width: double.infinity,
+                              height: 300,
+                              fit: BoxFit.cover,
+                            ),
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.black,
+                              ),
+                              onPressed: () => Navigator.pop(context),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Gula Aren',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.name,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Gula Aren',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                currencyFormat.format(priceInt),
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _buildSectionLabel("Suhu", "pilih 1"),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 12,
+                            children: [
+                              _buildTempOption('Dingin'),
+                              _buildTempOption('Panas'),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _buildSectionLabel("Ukuran", "pilih 1"),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 12,
+                            children: [
+                              _buildSizeOption('Kecil'),
+                              _buildSizeOption('Sedang'),
+                              _buildSizeOption('Besar'),
+                            ],
                           ),
                         ],
                       ),
-                      Text(
-                        'Rp. ${widget.price}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  _buildSectionLabel("Suhu", "pilih 1"),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _buildTempOption('Dingin')),
-                      const SizedBox(width: 10),
-                      Expanded(child: _buildTempOption('Panas')),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  _buildSectionLabel("Ukuran", "pilih 1"),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildSizeOption('Kecil'),
-                      const SizedBox(width: 10),
-                      _buildSizeOption('Sedang'),
-                      const SizedBox(width: 10),
-                      _buildSizeOption('Besar'),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            const Spacer(),
-            _buildBottomBar(totalPrice),
+            SafeArea(child: _buildBottomBar(totalPrice)),
           ],
         ),
       ),
@@ -157,25 +185,27 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
         'assets/images/${temp == 'Dingin' ? (isSelected ? 'ice-active.png' : 'ice-unactive.png') : (isSelected ? 'hot-active.png' : 'hot-unactive.png')}';
 
     return GestureDetector(
-      onTap: () => setState(() => selectedTemp = temp),
+      onTap: () {
+        if (!mounted) return;
+        setState(() => selectedTemp = temp);
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        width: 120,
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : const Color(0xfff3f3f3),
           border: Border.all(
             color: isSelected ? xprimaryColor : Colors.transparent,
-            width: isSelected ? 2 : 1,
+            width: 2,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(imagePath, width: 35, height: 35),
-            const SizedBox(height: 8),
-            Text(
-              temp,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
+            Image.asset(imagePath, width: 30, height: 30),
+            const SizedBox(height: 6),
+            Text(temp, style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),
@@ -185,27 +215,28 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
   Widget _buildSizeOption(String size) {
     bool isSelected = selectedSize == size;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => selectedSize = size),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : const Color(0xfff3f3f3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? xprimaryColor : Colors.transparent,
-              width: isSelected ? 2 : 1,
-            ),
+    return GestureDetector(
+      onTap: () {
+        if (!mounted) return;
+        setState(() => selectedSize = size);
+      },
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : const Color(0xfff3f3f3),
+          border: Border.all(
+            color: isSelected ? xprimaryColor : Colors.transparent,
+            width: 2,
           ),
-          child: Center(
-            child: Text(
-              size,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.black : Colors.black87,
-              ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            size,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.black : Colors.black87,
             ),
           ),
         ),
@@ -215,25 +246,25 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
   Widget _buildBottomBar(int totalPrice) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
       child: Row(
         children: [
-          // Quantity
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 _buildQtyButton(Icons.remove, () {
-                  if (quantity > 1) setState(() => quantity--);
+                  if (quantity > 1) {
+                    if (!mounted) return;
+                    setState(() => quantity--);
+                  }
                 }),
                 Container(
                   width: 40,
@@ -243,29 +274,31 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
-                _buildQtyButton(Icons.add, () => setState(() => quantity++)),
+                _buildQtyButton(Icons.add, () {
+                  if (!mounted) return;
+                  setState(() => quantity++);
+                }),
               ],
             ),
           ),
-          const SizedBox(width: 15),
-          // Button
+          const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton.icon(
               onPressed: _submitOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: xprimaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
               icon: const Icon(
                 HugeIcons.strokeRoundedShoppingCartAdd01,
                 color: Colors.white,
               ),
               label: Text(
-                'Rp. ${NumberFormat('#,###', 'id_ID').format(totalPrice)}',
-                style: const TextStyle(fontSize: 18, color: Colors.white),
+                currencyFormat.format(totalPrice),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: xprimaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
@@ -274,13 +307,13 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
     );
   }
 
-  Widget _buildQtyButton(IconData icon, VoidCallback onTap) {
+  Widget _buildQtyButton(IconData icon, VoidCallback onPressed) {
     return SizedBox(
       width: 40,
       height: 40,
       child: IconButton(
         icon: Icon(icon, size: 20),
-        onPressed: onTap,
+        onPressed: onPressed,
         padding: EdgeInsets.zero,
       ),
     );
@@ -310,11 +343,13 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
 
     try {
       await FirebaseFirestore.instance.collection('orders').add(order);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pesanan berhasil ditambahkan')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal menyimpan pesanan: $e')));
