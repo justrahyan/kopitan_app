@@ -1,11 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:device_apps/device_apps.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart';
-import 'package:kopitan_app/pages/payment_gateway.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:kopitan_app/pages/payment_success_page.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../widgets/order_bar_widget.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -34,6 +40,297 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
     }
 
+    // Fungsi untuk memeriksa apakah aplikasi tertentu terpasang
+    Future<bool> isAppInstalled(
+      String androidPackageName,
+      String iosUrlScheme,
+    ) async {
+      if (Theme.of(context).platform == TargetPlatform.android) {
+        // Cek menggunakan device_apps package
+        try {
+          // Import package
+          // import 'package:device_apps/device_apps.dart';
+
+          bool isInstalled = await DeviceApps.isAppInstalled(
+            androidPackageName,
+          );
+          print('App $androidPackageName installed: $isInstalled');
+          return isInstalled;
+        } catch (e) {
+          print('Error checking app installation: $e');
+
+          // Fallback: coba cek dengan deeplink
+          try {
+            // Untuk GoPay gunakan URI untuk deeplink
+            if (androidPackageName == 'com.gojek.app') {
+              final Uri uri = Uri.parse('gojek://');
+              return await canLaunchUrl(uri);
+            }
+            // Untuk OVO
+            else if (androidPackageName == 'ovo.id') {
+              final Uri uri = Uri.parse('ovo://');
+              return await canLaunchUrl(uri);
+            }
+          } catch (e) {
+            print('Deeplink check failed: $e');
+          }
+          return false;
+        }
+      } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+        final Uri uri = Uri.parse(iosUrlScheme);
+        return await canLaunchUrl(uri);
+      }
+      return false;
+    }
+
+    Future<void> clearUserOrders() async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+      for (final doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+    }
+
+    Future<void> handleTransactionSuccess() async {
+      await clearUserOrders();
+
+      if (!context.mounted)
+        return; // mencegah error jika context tidak tersedia
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PaymentSuccessPage()),
+      );
+    }
+
+    // Dialog konfirmasi untuk verifikasi status pembayaran setelah kembali dari aplikasi
+    void showPaymentConfirmationDialog() {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Konfirmasi Pembayaran'),
+            content: const Text('Apakah pembayaran sudah berhasil?'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Belum, Coba Lagi'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Ya, Berhasil'),
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await handleTransactionSuccess();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    // Fungsi untuk membuka aplikasi pembayaran atau fallback ke browser jika tidak terpasang
+    Future<void> openPaymentApp(String paymentType, String redirectUrl) async {
+      bool appInstalled = false;
+      Uri directAppUri;
+
+      if (paymentType == 'gopay') {
+        // URL scheme untuk GoPay
+        appInstalled = await isAppInstalled('com.gojek.app', 'gojek://');
+        // URL scheme untuk deep link ke GoPay
+        directAppUri = Uri.parse('gojek://gopay/merchanttransfer');
+      } else if (paymentType == 'ovo') {
+        // URL scheme untuk OVO
+        appInstalled = await isAppInstalled('ovo.id', 'ovo://');
+        // URL scheme untuk deep link ke OVO
+        directAppUri = Uri.parse('ovo://');
+      } else {
+        // QRIS atau metode lain langsung gunakan URL Midtrans
+        launchUrl(Uri.parse(redirectUrl), mode: LaunchMode.externalApplication);
+        return;
+      }
+
+      // Coba buka aplikasi jika terpasang
+      if (appInstalled) {
+        try {
+          // Tambahkan parameter ke deeplink jika tersedia dari Midtrans
+          await launchUrl(directAppUri);
+
+          // Tampilkan dialog untuk mengonfirmasi pembayaran setelah kembali dari aplikasi
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              showPaymentConfirmationDialog();
+            }
+          });
+        } catch (e) {
+          // Fallback ke URL Midtrans jika deep link gagal
+          await launchUrl(
+            Uri.parse(redirectUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      } else {
+        // Jika aplikasi tidak terpasang, gunakan URL Midtrans biasa
+        await launchUrl(
+          Uri.parse(redirectUrl),
+          mode: LaunchMode.externalApplication,
+        );
+
+        // Tampilkan informasi tentang aplikasi yang tidak terpasang
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Aplikasi ${paymentType.toUpperCase()} tidak terdeteksi. Menggunakan browser untuk pembayaran.',
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
+
+    Future<String?> createMidtransTransaction({
+      required int amount,
+      required String orderId,
+      required String paymentType, // gopay / qris / ovo
+    }) async {
+      final String serverKey =
+          'SB-Mid-server-Ka569NR2WZQrEina14y4Ng9j'; // dari Midtrans
+      final String basicAuth =
+          'Basic ' + base64Encode(utf8.encode('$serverKey:'));
+
+      final url = Uri.parse(
+        'https://app.sandbox.midtrans.com/snap/v1/transactions',
+      );
+
+      String firstName = 'Pengguna';
+      String email = user?.email ?? 'email@example.com';
+
+      if (user != null) {
+        try {
+          final userDoc =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+
+          if (userDoc.exists) {
+            final userData = userDoc.data() as Map<String, dynamic>;
+            firstName =
+                userData['name'] ??
+                userData['firstName'] ??
+                user.displayName ??
+                'Pengguna';
+            // Use the email from Firestore if available, otherwise use the one from auth
+            email = userData['email'] ?? user.email ?? 'email@example.com';
+          } else if (user.displayName != null) {
+            // If no user document but user has a display name
+            firstName = user.displayName!;
+          }
+        } catch (e) {
+          print('Error retrieving user data: $e');
+          // Fallback to auth user data
+          firstName = user.displayName ?? 'Pengguna';
+        }
+      }
+
+      final body = {
+        "transaction_details": {"order_id": orderId, "gross_amount": amount},
+        "enabled_payments": [paymentType],
+        "customer_details": {"first_name": firstName, "email": email},
+      };
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': basicAuth,
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        // Cek apakah ada actions spesifik untuk GoPay/OVO
+        if (data['payment_type'] == 'gopay' && data['actions'] != null) {
+          // Untuk GoPay, biasanya berisi deep link ke aplikasi
+          for (final action in data['actions']) {
+            if (action['name'] == 'deeplink-redirect') {
+              return action['url']; // Deep link URL untuk GoPay
+            }
+          }
+        }
+
+        return data['redirect_url']; // Gunakan WebView atau buka browser
+      } else {
+        print('Gagal buat transaksi: ${response.body}');
+        return null;
+      }
+    }
+
+    // Fungsi untuk menangani pembayaran
+    void processPayment(int totalPrice) async {
+      String paymentType = '';
+
+      // Sesuaikan format payment type untuk Midtrans
+      switch (selectedPaymentMethod) {
+        case 'GoPay':
+          paymentType = 'gopay';
+          break;
+        case 'OVO':
+          paymentType = 'ovo';
+          break;
+        case 'QRIS':
+          paymentType = 'qris';
+          break;
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Silakan pilih metode pembayaran')),
+          );
+          return;
+      }
+
+      // Tunjukkan loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+
+      final orderId = "ORDER-${DateTime.now().millisecondsSinceEpoch}";
+      final redirectUrl = await createMidtransTransaction(
+        amount: totalPrice,
+        orderId: orderId,
+        paymentType: paymentType,
+      );
+
+      // Tutup loading dialog
+      Navigator.of(context).pop();
+
+      if (redirectUrl != null) {
+        // Buka aplikasi pembayaran atau browser tergantung pada metode pembayaran
+        await openPaymentApp(paymentType, redirectUrl);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memulai pembayaran. Silakan coba lagi.'),
+          ),
+        );
+      }
+    }
+
     void showPaymentMethodsBottomSheet() {
       showModalBottomSheet(
         context: context,
@@ -58,6 +355,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Section Title: E-Wallet
                     const Text(
                       'E-Wallet',
                       style: TextStyle(
@@ -66,16 +365,134 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    paymentOption(
-                      icon: 'assets/images/pembayaran/gopay.png',
-                      label: 'GoPay',
+
+                    // GoPay Option
+                    InkWell(
+                      onTap: () {
+                        this.setState(() {
+                          selectedPaymentMethod = 'GoPay';
+                          selectedPaymentIcon =
+                              'assets/images/pembayaran/gopay.png';
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Image.asset(
+                                'assets/images/pembayaran/gopay.png',
+                                width: 32,
+                                height: 32,
+                                errorBuilder:
+                                    (context, error, stackTrace) => const Icon(
+                                      Icons.account_balance_wallet,
+                                      color: Colors.blue,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'GoPay',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Radio<String>(
+                              value: 'GoPay',
+                              groupValue: selectedPaymentMethod,
+                              onChanged: (value) {
+                                this.setState(() {
+                                  selectedPaymentMethod = value!;
+                                  selectedPaymentIcon =
+                                      'assets/images/pembayaran/gopay.png';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+
                     const SizedBox(height: 10),
-                    paymentOption(
-                      icon: 'assets/images/pembayaran/ovo.png',
-                      label: 'OVO',
+
+                    // OVO Option
+                    InkWell(
+                      onTap: () {
+                        this.setState(() {
+                          selectedPaymentMethod = 'OVO';
+                          selectedPaymentIcon =
+                              'assets/images/pembayaran/ovo.png';
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Image.asset(
+                                'assets/images/pembayaran/ovo.png',
+                                width: 32,
+                                height: 32,
+                                errorBuilder:
+                                    (context, error, stackTrace) => const Icon(
+                                      Icons.account_balance_wallet,
+                                      color: Colors.purple,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'OVO',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Radio<String>(
+                              value: 'OVO',
+                              groupValue: selectedPaymentMethod,
+                              onChanged: (value) {
+                                this.setState(() {
+                                  selectedPaymentMethod = value!;
+                                  selectedPaymentIcon =
+                                      'assets/images/pembayaran/ovo.png';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+
                     const SizedBox(height: 20),
+
+                    // Section Title: Lainnya
                     const Text(
                       'Lainnya',
                       style: TextStyle(
@@ -84,9 +501,66 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    paymentOption(
-                      icon: 'assets/images/pembayaran/qris.png',
-                      label: 'QRIS',
+
+                    // QRIS Option
+                    InkWell(
+                      onTap: () {
+                        this.setState(() {
+                          selectedPaymentMethod = 'QRIS';
+                          selectedPaymentIcon =
+                              'assets/images/pembayaran/qris.png';
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Image.asset(
+                                'assets/images/pembayaran/qris.png',
+                                width: 32,
+                                height: 32,
+                                errorBuilder:
+                                    (context, error, stackTrace) => const Icon(
+                                      Icons.qr_code,
+                                      color: Colors.black,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'QRIS',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Radio<String>(
+                              value: 'QRIS',
+                              groupValue: selectedPaymentMethod,
+                              onChanged: (value) {
+                                this.setState(() {
+                                  selectedPaymentMethod = value!;
+                                  selectedPaymentIcon =
+                                      'assets/images/pembayaran/qris.png';
+                                });
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -126,6 +600,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           }
 
           final orders = snapshot.data!.docs;
+
           final totalPrice = orders.fold(0, (sum, doc) {
             final data = doc.data() as Map<String, dynamic>? ?? {};
             return sum + (data['totalPrice'] as int);
@@ -133,7 +608,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
           return Column(
             children: [
-              // HEADER
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -151,12 +625,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     GestureDetector(
                       onTap: () {
+                        // Close the current checkout page first
                         Navigator.pop(context);
+
+                        // Find the main screen state and switch to menu tab
                         final navigatorState = Navigator.of(
                           context,
                           rootNavigator: true,
                         );
                         navigatorState.popUntil((route) => route.isFirst);
+
+                        // Use Future.delayed to ensure we're back at the main screen before switching tabs
                         Future.delayed(const Duration(milliseconds: 100), () {
                           final mainScreenState =
                               navigatorState.context
@@ -164,7 +643,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     KopitanAppMainScreenState
                                   >();
                           if (mainScreenState != null) {
-                            mainScreenState.switchToTab(1);
+                            mainScreenState.switchToTab(
+                              1,
+                            ); // Switch to menu tab (index 1)
                           }
                         });
                       },
@@ -192,14 +673,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
               ),
               const Divider(thickness: 1),
-
-              // LIST ORDER
               Expanded(
                 child: ListView.builder(
                   itemCount: orders.length,
                   itemBuilder: (context, index) {
                     final doc = orders[index];
                     final data = doc.data() as Map<String, dynamic>? ?? {};
+
                     final imagePath = data['imagePath'] ?? '';
                     final name = data['name'] ?? 'Tanpa Nama';
                     final temperature = data['temperature'] ?? '-';
@@ -208,14 +688,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     final itemTotal = data['totalPrice'] ?? 0;
                     final unitPrice = quantity > 0 ? itemTotal ~/ quantity : 0;
 
-                    void updateQuantity(int newQty) {
-                      if (newQty < 1) return;
+                    void updateQuantity(int newQuantity) {
+                      if (newQuantity < 1) return; // minimum quantity 1
+                      final newTotal = unitPrice * newQuantity;
                       FirebaseFirestore.instance
                           .collection('orders')
                           .doc(doc.id)
                           .update({
-                            'quantity': newQty,
-                            'totalPrice': unitPrice * newQty,
+                            'quantity': newQuantity,
+                            'totalPrice': newTotal,
                           });
                     }
 
@@ -234,7 +715,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(100),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(100),
+                            ),
                             child:
                                 imagePath.toString().startsWith('http')
                                     ? Image.network(
@@ -281,11 +764,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               IconButton(
                                 onPressed: () => updateQuantity(quantity - 1),
                                 icon: const Icon(Icons.remove),
+                                splashRadius: 20,
                               ),
                               Text('$quantity'),
                               IconButton(
                                 onPressed: () => updateQuantity(quantity + 1),
                                 icon: const Icon(Icons.add),
+                                splashRadius: 20,
                               ),
                             ],
                           ),
@@ -295,8 +780,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   },
                 ),
               ),
-
-              // FOOTER
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -366,6 +849,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -388,32 +872,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed:
-                          selectedPaymentMethod == 'Pilih Metode Pembayaran'
-                              ? null
-                              : () {
-                                // Cache all necessary data from the widget tree
-                                final currentContext = context;
-                                final currentPaymentMethod =
-                                    selectedPaymentMethod;
-                                final currentTotalPrice = totalPrice;
-                                final currentOrders =
-                                    List<QueryDocumentSnapshot>.from(orders);
-
-                                // Use a separate function to handle async code
-                                _processPayment(
-                                  context: currentContext,
-                                  paymentMethod: currentPaymentMethod,
-                                  totalAmount: currentTotalPrice,
-                                  orderItems: currentOrders,
-                                );
-                              },
+                      onPressed: () => processPayment(totalPrice),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor:
-                            selectedPaymentMethod == 'Pilih Metode Pembayaran'
-                                ? Colors.grey
-                                : xprimaryColor,
+                        backgroundColor: xprimaryColor,
                       ),
                       child: const Text(
                         'Konfirmasi Pesanan',
@@ -429,84 +891,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  // Separate method to handle the async payment process
-  Future<void> _processPayment({
-    required BuildContext context,
-    required String paymentMethod,
-    required int totalAmount,
-    required List<QueryDocumentSnapshot> orderItems,
-  }) async {
-    try {
-      await PaymentGateway.processPayment(
-        context: context,
-        paymentMethod: paymentMethod,
-        totalAmount: totalAmount,
-        orderItems: orderItems,
-      );
-    } catch (e) {
-      // Handle error safely
-      if (mounted) {
-        // Check if the widget is still in the tree
-        Navigator.pop(context); // Remove loading
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-      }
-    }
-  }
-
-  Widget paymentOption({required String icon, required String label}) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          selectedPaymentMethod = label;
-          selectedPaymentIcon = icon;
-        });
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Image.asset(
-                icon,
-                width: 32,
-                height: 32,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.account_balance_wallet);
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-            const Spacer(),
-            Radio<String>(
-              value: label,
-              groupValue: selectedPaymentMethod,
-              onChanged: (value) {
-                setState(() {
-                  selectedPaymentMethod = value!;
-                  selectedPaymentIcon = icon;
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
