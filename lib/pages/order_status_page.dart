@@ -73,12 +73,15 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     .doc(orderData['userId'])
                     .get(),
             builder: (context, userSnapshot) {
-              String customerName = 'Customer';
+              String customerName = orderData['full_name'] ?? 'Customer';
+
               if (userSnapshot.hasData && userSnapshot.data!.exists) {
                 final userData =
                     userSnapshot.data!.data() as Map<String, dynamic>;
                 customerName =
-                    userData['name'] ?? userData['firstName'] ?? 'Customer';
+                    userData['full_name'] ??
+                    userData['full_name'] ??
+                    customerName;
               }
 
               return Stack(

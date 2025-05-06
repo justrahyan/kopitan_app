@@ -3,6 +3,7 @@ import 'package:kopitan_app/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'order_status_page.dart';
 
 class KopitanOrderScreen extends StatefulWidget {
@@ -178,7 +179,9 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
           ElevatedButton(
             onPressed: () {
               // Navigate to menu page or wherever users can place orders
-              Navigator.pushNamed(context, '/menu');
+              final mainState =
+                  context.findAncestorStateOfType<KopitanAppMainScreenState>();
+              mainState?.switchToMenuTab('Semua');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: xprimaryColor,
