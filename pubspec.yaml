@@ -44,7 +44,6 @@ dependencies:
   url_launcher: ^6.3.1
   package_info_plus: ^8.3.0
   flutter_launcher_icons: ^0.14.3
-  device_apps: ^2.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

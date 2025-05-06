@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:device_apps/device_apps.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,7 +9,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kopitan_app/pages/payment_success_page.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../widgets/order_bar_widget.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -20,9 +18,187 @@ class CheckoutPage extends StatefulWidget {
   State<CheckoutPage> createState() => _CheckoutPageState();
 }
 
-class _CheckoutPageState extends State<CheckoutPage> {
+class _CheckoutPageState extends State<CheckoutPage>
+    with WidgetsBindingObserver {
   String selectedPaymentMethod = 'Pilih Metode Pembayaran';
   String selectedPaymentIcon = '';
+  bool _isPaymentInProgress = false;
+  String? _currentOrderId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Register observer to detect when app comes back to foreground
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // Remove observer when page is disposed
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Called when app state changes (background to foreground)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isPaymentInProgress) {
+      // App came back to foreground while payment was in progress
+      _checkPaymentStatus();
+    }
+  }
+
+  Future<void> saveOrderToHistory({
+    required String orderId,
+    required int totalAmount,
+    required String paymentMethod,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // First, get all current orders to combine into a complete order history
+      final orderSnapshot =
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+      // Extract order items
+      final List<Map<String, dynamic>> orderItems = [];
+      for (final doc in orderSnapshot.docs) {
+        final data = doc.data();
+        orderItems.add({
+          'name': data['name'] ?? 'Unknown Item',
+          'temperature': data['temperature'] ?? '-',
+          'size': data['size'] ?? '-',
+          'quantity': data['quantity'] ?? 1,
+          'unitPrice': data['totalPrice'] ~/ (data['quantity'] ?? 1),
+          'totalPrice': data['totalPrice'] ?? 0,
+          'imagePath': data['imagePath'] ?? '',
+        });
+      }
+
+      // Save to order_history collection
+      await FirebaseFirestore.instance.collection('order_history').add({
+        'userId': user.uid,
+        'orderId': orderId,
+        'items': orderItems,
+        'totalAmount': totalAmount,
+        'paymentMethod': paymentMethod,
+        'status': 'completed',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      print('Order saved to history successfully!');
+    } catch (e) {
+      print('Error saving order to history: $e');
+    }
+  }
+
+  Future<void> clearUserOrders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
+  Future<void> handleTransactionSuccess() async {
+    final String orderId =
+        _currentOrderId ?? "ORDER-${DateTime.now().millisecondsSinceEpoch}";
+    await saveOrderToHistory(
+      orderId: orderId,
+      totalAmount: await calculateTotalPrice(),
+      paymentMethod: selectedPaymentMethod,
+    );
+    await clearUserOrders();
+
+    if (!context.mounted) return; // mencegah error jika context tidak tersedia
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentSuccessPage(orderId: orderId),
+      ),
+    );
+  }
+
+  Future<int> calculateTotalPrice() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 0;
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+
+    int total = 0;
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      total += (data['totalPrice'] as int? ?? 0);
+    }
+    return total;
+  }
+
+  // Check payment status with Midtrans API
+  Future<void> _checkPaymentStatus() async {
+    if (_currentOrderId == null) return;
+
+    try {
+      final String serverKey = 'SB-Mid-server-Ka569NR2WZQrEina14y4Ng9j';
+      final String basicAuth =
+          'Basic ' + base64Encode(utf8.encode('$serverKey:'));
+
+      final url = Uri.parse(
+        'https://api.sandbox.midtrans.com/v2/${_currentOrderId}/status',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'Authorization': basicAuth},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final transactionStatus = data['transaction_status'];
+
+        // Handle different payment statuses
+        if (transactionStatus == 'settlement' ||
+            transactionStatus == 'capture' ||
+            transactionStatus == 'accept') {
+          // Payment is successful
+          _isPaymentInProgress = false;
+          await handleTransactionSuccess();
+        } else if (transactionStatus == 'pending') {
+          // Payment still pending, do nothing yet
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pembayaran masih dalam proses')),
+          );
+        } else {
+          // Payment failed or canceled
+          _isPaymentInProgress = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pembayaran gagal atau dibatalkan')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error checking payment status: $e');
+      // Try again later or let user manually check
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memeriksa status pembayaran')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,165 +214,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         appBar: AppBar(title: const Text('Checkout')),
         body: const Center(child: Text('Silakan login terlebih dahulu')),
       );
-    }
-
-    // Fungsi untuk memeriksa apakah aplikasi tertentu terpasang
-    Future<bool> isAppInstalled(
-      String androidPackageName,
-      String iosUrlScheme,
-    ) async {
-      if (Theme.of(context).platform == TargetPlatform.android) {
-        // Cek menggunakan device_apps package
-        try {
-          // Import package
-          // import 'package:device_apps/device_apps.dart';
-
-          bool isInstalled = await DeviceApps.isAppInstalled(
-            androidPackageName,
-          );
-          print('App $androidPackageName installed: $isInstalled');
-          return isInstalled;
-        } catch (e) {
-          print('Error checking app installation: $e');
-
-          // Fallback: coba cek dengan deeplink
-          try {
-            // Untuk GoPay gunakan URI untuk deeplink
-            if (androidPackageName == 'com.gojek.app') {
-              final Uri uri = Uri.parse('gojek://');
-              return await canLaunchUrl(uri);
-            }
-            // Untuk OVO
-            else if (androidPackageName == 'ovo.id') {
-              final Uri uri = Uri.parse('ovo://');
-              return await canLaunchUrl(uri);
-            }
-          } catch (e) {
-            print('Deeplink check failed: $e');
-          }
-          return false;
-        }
-      } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-        final Uri uri = Uri.parse(iosUrlScheme);
-        return await canLaunchUrl(uri);
-      }
-      return false;
-    }
-
-    Future<void> clearUserOrders() async {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('orders')
-              .where('userId', isEqualTo: user.uid)
-              .get();
-
-      for (final doc in snapshot.docs) {
-        await doc.reference.delete();
-      }
-    }
-
-    Future<void> handleTransactionSuccess() async {
-      await clearUserOrders();
-
-      if (!context.mounted)
-        return; // mencegah error jika context tidak tersedia
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentSuccessPage()),
-      );
-    }
-
-    // Dialog konfirmasi untuk verifikasi status pembayaran setelah kembali dari aplikasi
-    void showPaymentConfirmationDialog() {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Konfirmasi Pembayaran'),
-            content: const Text('Apakah pembayaran sudah berhasil?'),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Belum, Coba Lagi'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('Ya, Berhasil'),
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  await handleTransactionSuccess();
-                },
-              ),
-            ],
-          );
-        },
-      );
-    }
-
-    // Fungsi untuk membuka aplikasi pembayaran atau fallback ke browser jika tidak terpasang
-    Future<void> openPaymentApp(String paymentType, String redirectUrl) async {
-      bool appInstalled = false;
-      Uri directAppUri;
-
-      if (paymentType == 'gopay') {
-        // URL scheme untuk GoPay
-        appInstalled = await isAppInstalled('com.gojek.app', 'gojek://');
-        // URL scheme untuk deep link ke GoPay
-        directAppUri = Uri.parse('gojek://gopay/merchanttransfer');
-      } else if (paymentType == 'ovo') {
-        // URL scheme untuk OVO
-        appInstalled = await isAppInstalled('ovo.id', 'ovo://');
-        // URL scheme untuk deep link ke OVO
-        directAppUri = Uri.parse('ovo://');
-      } else {
-        // QRIS atau metode lain langsung gunakan URL Midtrans
-        launchUrl(Uri.parse(redirectUrl), mode: LaunchMode.externalApplication);
-        return;
-      }
-
-      // Coba buka aplikasi jika terpasang
-      if (appInstalled) {
-        try {
-          // Tambahkan parameter ke deeplink jika tersedia dari Midtrans
-          await launchUrl(directAppUri);
-
-          // Tampilkan dialog untuk mengonfirmasi pembayaran setelah kembali dari aplikasi
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              showPaymentConfirmationDialog();
-            }
-          });
-        } catch (e) {
-          // Fallback ke URL Midtrans jika deep link gagal
-          await launchUrl(
-            Uri.parse(redirectUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        }
-      } else {
-        // Jika aplikasi tidak terpasang, gunakan URL Midtrans biasa
-        await launchUrl(
-          Uri.parse(redirectUrl),
-          mode: LaunchMode.externalApplication,
-        );
-
-        // Tampilkan informasi tentang aplikasi yang tidak terpasang
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Aplikasi ${paymentType.toUpperCase()} tidak terdeteksi. Menggunakan browser untuk pembayaran.',
-              ),
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      }
     }
 
     Future<String?> createMidtransTransaction({
@@ -261,16 +278,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        // Cek apakah ada actions spesifik untuk GoPay/OVO
-        if (data['payment_type'] == 'gopay' && data['actions'] != null) {
-          // Untuk GoPay, biasanya berisi deep link ke aplikasi
-          for (final action in data['actions']) {
-            if (action['name'] == 'deeplink-redirect') {
-              return action['url']; // Deep link URL untuk GoPay
-            }
-          }
-        }
-
         return data['redirect_url']; // Gunakan WebView atau buka browser
       } else {
         print('Gagal buat transaksi: ${response.body}');
@@ -278,56 +285,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     }
 
-    // Fungsi untuk menangani pembayaran
-    void processPayment(int totalPrice) async {
-      String paymentType = '';
-
-      // Sesuaikan format payment type untuk Midtrans
-      switch (selectedPaymentMethod) {
-        case 'GoPay':
-          paymentType = 'gopay';
-          break;
-        case 'OVO':
-          paymentType = 'ovo';
-          break;
-        case 'QRIS':
-          paymentType = 'qris';
-          break;
-        default:
+    void launchPayment(String url) async {
+      try {
+        final uri = Uri.parse(url);
+        _isPaymentInProgress = true; // Mark payment as in progress
+        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          _isPaymentInProgress = false; // Reset if launch fails
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Silakan pilih metode pembayaran')),
+            const SnackBar(content: Text('Tidak bisa membuka link pembayaran')),
           );
-          return;
-      }
-
-      // Tunjukkan loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(child: CircularProgressIndicator());
-        },
-      );
-
-      final orderId = "ORDER-${DateTime.now().millisecondsSinceEpoch}";
-      final redirectUrl = await createMidtransTransaction(
-        amount: totalPrice,
-        orderId: orderId,
-        paymentType: paymentType,
-      );
-
-      // Tutup loading dialog
-      Navigator.of(context).pop();
-
-      if (redirectUrl != null) {
-        // Buka aplikasi pembayaran atau browser tergantung pada metode pembayaran
-        await openPaymentApp(paymentType, redirectUrl);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal memulai pembayaran. Silakan coba lagi.'),
-          ),
-        );
+        }
+      } catch (e) {
+        _isPaymentInProgress = false; // Reset if error occurs
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
 
@@ -872,19 +844,85 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: () => processPayment(totalPrice),
+                      onPressed:
+                          _isPaymentInProgress
+                              ? null // Disable button if payment is in progress
+                              : () async {
+                                if (selectedPaymentMethod ==
+                                    'Pilih Metode Pembayaran') {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Pilih metode pembayaran terlebih dahulu',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Create a unique order ID
+                                _currentOrderId =
+                                    "ORDER-${DateTime.now().millisecondsSinceEpoch}";
+
+                                final redirectUrl =
+                                    await createMidtransTransaction(
+                                      amount: totalPrice,
+                                      orderId: _currentOrderId!,
+                                      paymentType:
+                                          selectedPaymentMethod.toLowerCase(),
+                                    );
+
+                                if (redirectUrl != null) {
+                                  launchPayment(redirectUrl);
+                                  // Payment check will happen when app comes back to foreground
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Gagal memulai pembayaran'),
+                                    ),
+                                  );
+                                }
+                              },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: xprimaryColor,
                       ),
-                      child: const Text(
-                        'Konfirmasi Pesanan',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child:
+                          _isPaymentInProgress
+                              ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Proses Pembayaran...',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : const Text(
+                                'Konfirmasi Pesanan',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                     ),
+                    if (_isPaymentInProgress)
+                      TextButton(
+                        onPressed: _checkPaymentStatus,
+                        child: const Text('Saya sudah membayar'),
+                      ),
                   ],
                 ),
               ),
