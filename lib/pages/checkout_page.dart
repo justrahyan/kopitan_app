@@ -87,7 +87,7 @@ class _CheckoutPageState extends State<CheckoutPage>
         'items': orderItems,
         'totalAmount': totalAmount,
         'paymentMethod': paymentMethod,
-        'status': 'completed',
+        'status': 'pending',
         'timestamp': FieldValue.serverTimestamp(),
       });
 

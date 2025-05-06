@@ -33,7 +33,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
           color: Colors.black,
         ),
         centerTitle: true,
-        backgroundColor: Colors.white, // Match the background
+        backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
       ),
@@ -52,20 +52,16 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
             return const Center(child: Text('Pesanan tidak ditemukan'));
           }
 
-          // Get the latest order
           final doc = snapshot.data!.docs.first;
           final orderData = doc.data() as Map<String, dynamic>;
 
-          // Extract order details
           final String orderId = orderData['orderId'] ?? 'Unknown';
           final String paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
           final int totalAmount = orderData['totalAmount'] ?? 0;
           final List<dynamic> items = orderData['items'] ?? [];
           final Timestamp timestamp = orderData['timestamp'] ?? Timestamp.now();
-          final String status = 'processing';
-          // final String status = orderData['status'] ?? 'processing';
+          final String status = orderData['status'] ?? 'processing';
 
-          // Get user data
           return FutureBuilder<DocumentSnapshot>(
             future:
                 FirebaseFirestore.instance
@@ -73,15 +69,11 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     .doc(orderData['userId'])
                     .get(),
             builder: (context, userSnapshot) {
-              String customerName = orderData['full_name'] ?? 'Customer';
-
+              String customerName = 'Customer';
               if (userSnapshot.hasData && userSnapshot.data!.exists) {
                 final userData =
                     userSnapshot.data!.data() as Map<String, dynamic>;
-                customerName =
-                    userData['full_name'] ??
-                    userData['full_name'] ??
-                    customerName;
+                customerName = userData['full_name'] ?? 'Customer';
               }
 
               return Stack(
@@ -93,13 +85,9 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                         Container(
                           width: double.infinity,
                           color: xthirdColor,
-                          padding: const EdgeInsets.only(
-                            top: 20,
-                            bottom: 20,
-                          ), // cukup tinggi
+                          padding: const EdgeInsets.only(top: 20, bottom: 20),
                           child: Column(
                             children: [
-                              // Progress Bar
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20.0,
@@ -140,10 +128,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                                   ],
                                 ),
                               ),
-
                               const SizedBox(height: 24),
-
-                              // Nomor Order
                               const Text(
                                 'Nomor Order',
                                 style: TextStyle(
@@ -158,20 +143,12 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-
-                              const SizedBox(
-                                height: 32,
-                              ), // ini akan membuat efek ‘setengah dari card’ nanti
+                              const SizedBox(height: 32),
                             ],
                           ),
                         ),
-
-                        // Status Message Card
                         Transform.translate(
-                          offset: const Offset(
-                            0,
-                            -40,
-                          ), // agar naik dan separuh masuk ke area xthirdColor
+                          offset: const Offset(0, -40),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16.0,
@@ -207,8 +184,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             ),
                           ),
                         ),
-
-                        // Detail Pesanan Section Card
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           child: Card(
@@ -239,8 +214,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             ),
                           ),
                         ),
-
-                        // Pesanan Section Card
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Card(
@@ -255,28 +228,23 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                                   'Pesanan',
                                   'Total ${items.length} items',
                                 ),
-                                ...items
-                                    .map(
-                                      (item) => _buildOrderItemTile(
-                                        name: item['name'] ?? 'Unknown Item',
-                                        desc:
-                                            '${item['temperature'] ?? '-'}, ${item['size'] ?? '-'}',
-                                        price: currencyFormat.format(
-                                          item['totalPrice'] ?? 0,
-                                        ),
-                                        quantity: item['quantity'] ?? 1,
-                                        imagePath: item['imagePath'] ?? '',
-                                      ),
-                                    )
-                                    .toList(),
+                                ...items.map(
+                                  (item) => _buildOrderItemTile(
+                                    name: item['name'] ?? 'Unknown Item',
+                                    desc:
+                                        '${item['temperature'] ?? '-'}, ${item['size'] ?? '-'}',
+                                    price: currencyFormat.format(
+                                      item['totalPrice'] ?? 0,
+                                    ),
+                                    quantity: item['quantity'] ?? 1,
+                                    imagePath: item['imagePath'] ?? '',
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // Detail Pembayaran Section Card
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Card(
@@ -309,7 +277,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -323,7 +290,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     );
   }
 
-  // Helper method to get formatted order ID (showing just last 3 digits)
   String _formatOrderId(String orderId) {
     if (orderId.length > 3) {
       return orderId.substring(orderId.length - 3);
@@ -331,7 +297,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     return orderId;
   }
 
-  // Status message helpers
   String _getStatusMessage(String status) {
     switch (status) {
       case 'processing':
@@ -358,7 +323,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     }
   }
 
-  // Order query helper
   Stream<QuerySnapshot> _getOrderQuery() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -371,7 +335,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
         .orderBy('timestamp', descending: true)
         .limit(1);
 
-    // If orderId is provided, filter by that instead
     if (widget.orderId != null && widget.orderId!.isNotEmpty) {
       query = FirebaseFirestore.instance
           .collection('order_history')
@@ -381,7 +344,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     return query.snapshots();
   }
 
-  // UI Building Widgets
   Widget _buildProgressStep({
     required String icon,
     required String label,
@@ -448,7 +410,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   }
 
   IconData _getIconData(String icon) {
-    // Map icon names to Flutter Icons
     switch (icon) {
       case 'refresh':
         return Icons.refresh;
@@ -559,9 +520,8 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                 const SizedBox(height: 4),
                 Text(
                   price,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
                     fontSize: 16,
                   ),
                 ),
@@ -648,7 +608,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   }
 
   Widget _getPaymentMethodLogo(String paymentMethod) {
-    // You would need to replace this with actual payment method logos
     IconData iconData;
 
     switch (paymentMethod.toLowerCase()) {
