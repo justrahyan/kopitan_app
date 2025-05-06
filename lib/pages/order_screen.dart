@@ -3,6 +3,7 @@ import 'package:kopitan_app/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'order_status_page.dart';
 
 class KopitanOrderScreen extends StatefulWidget {
@@ -105,7 +106,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
 
         final allOrders = snapshot.data?.docs ?? [];
 
-        // Filter orders based on status
         final filteredOrders =
             allOrders.where((doc) {
               final orderData = doc.data() as Map<String, dynamic>;
@@ -146,16 +146,11 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       return Stream.empty();
     }
 
-    try {
-      return FirebaseFirestore.instance
-          .collection('order_history')
-          .where('userId', isEqualTo: user.uid)
-          .orderBy('timestamp', descending: true)
-          .snapshots();
-    } catch (e) {
-      print('Error getting orders: $e');
-      return Stream.empty();
-    }
+    return FirebaseFirestore.instance
+        .collection('order_history')
+        .where('userId', isEqualTo: user.uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   Widget _buildEmptyOrderView() {
@@ -172,7 +167,9 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/menu');
+              final mainState =
+                  context.findAncestorStateOfType<KopitanAppMainScreenState>();
+              mainState?.switchToMenuTab('Semua');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: xprimaryColor,
@@ -238,7 +235,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kiri
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +256,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
                   ],
                 ),
               ),
-              // Kanan
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -289,21 +284,25 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     );
   }
 
+  // ✅ Menampilkan 3 digit terakhir dari orderId yang seperti: ORDER-1746559805437 → 437
   String _formatOrderId(String orderId) {
-    if (orderId.length > 3) {
-      return orderId.substring(orderId.length - 3);
+    final parts = orderId.split('-');
+    if (parts.length == 2) {
+      final numberPart = parts[1];
+      if (numberPart.length >= 3) {
+        return numberPart.substring(numberPart.length - 3);
+      }
     }
-    return orderId;
+    return 'XXX';
   }
 
   Widget _buildItemImages(List<dynamic> items) {
     if (items.isEmpty) return const SizedBox();
 
     const int maxImagesToShow = 2;
-    final int totalItems = items.length;
     final List<Widget> imageWidgets = [];
 
-    for (int i = 0; i < totalItems && i < maxImagesToShow; i++) {
+    for (int i = 0; i < items.length && i < maxImagesToShow; i++) {
       final item = items[i];
       final String imagePath = item['imagePath'] ?? '';
 
@@ -329,8 +328,8 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       );
     }
 
-    if (totalItems > maxImagesToShow) {
-      final int extraItems = totalItems - maxImagesToShow;
+    if (items.length > maxImagesToShow) {
+      final int extraItems = items.length - maxImagesToShow;
       imageWidgets.add(
         Padding(
           padding: const EdgeInsets.only(right: 4),
