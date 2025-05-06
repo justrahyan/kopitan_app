@@ -82,11 +82,12 @@ class _CheckoutPageState extends State<CheckoutPage>
       // Save to order_history collection
       await FirebaseFirestore.instance.collection('order_history').add({
         'userId': user.uid,
+        'userName': user.displayName ?? 'Pengguna',
         'orderId': orderId,
         'items': orderItems,
         'totalAmount': totalAmount,
         'paymentMethod': paymentMethod,
-        'status': 'completed',
+        'status': 'pending',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -245,7 +246,7 @@ class _CheckoutPageState extends State<CheckoutPage>
             final userData = userDoc.data() as Map<String, dynamic>;
             firstName =
                 userData['name'] ??
-                userData['firstName'] ??
+                userData['full_name'] ??
                 user.displayName ??
                 'Pengguna';
             // Use the email from Firestore if available, otherwise use the one from auth

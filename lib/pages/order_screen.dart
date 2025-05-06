@@ -40,7 +40,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Tab Bar
             Container(
               padding: const EdgeInsets.only(top: 10),
               child: TabBar(
@@ -72,7 +71,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
 
   Widget _buildOrdersTab({required bool isActive}) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _getOrdersStream(isActive),
+      stream: _getOrdersStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -89,9 +88,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    setState(() {
-                      // Refresh the state to try again
-                    });
+                    setState(() {});
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: xprimaryColor,
@@ -108,17 +105,17 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
 
         final allOrders = snapshot.data?.docs ?? [];
 
-        // Filter orders by status in the code instead of in the query
+        // Filter orders based on status
         final filteredOrders =
             allOrders.where((doc) {
               final orderData = doc.data() as Map<String, dynamic>;
-              final String status = orderData['status'] ?? 'processing';
+              final String status = orderData['status'] ?? 'pending';
 
               if (isActive) {
-                // Active orders: processing or ready
-                return status == 'processing' || status == 'ready';
+                return status == 'pending' ||
+                    status == 'processing' ||
+                    status == 'ready';
               } else {
-                // Completed orders
                 return status == 'completed';
               }
             }).toList();
@@ -143,15 +140,13 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     );
   }
 
-  Stream<QuerySnapshot> _getOrdersStream(bool isActive) {
+  Stream<QuerySnapshot> _getOrdersStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Stream.empty();
     }
 
     try {
-      // First approach: just filter by userId and handle filtering by status in code
-      // This avoids the need for a compound index
       return FirebaseFirestore.instance
           .collection('order_history')
           .where('userId', isEqualTo: user.uid)
@@ -177,7 +172,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              // Navigate to menu page or wherever users can place orders
               Navigator.pushNamed(context, '/menu');
             },
             style: ElevatedButton.styleFrom(
@@ -203,13 +197,15 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     final String dateTime = DateFormat(
       'dd MMM yyyy, HH:mm',
     ).format(timestamp.toDate());
-    final String status = orderData['status'] ?? 'processing';
+    final String status = orderData['status'] ?? 'pending';
     final int totalAmount = orderData['totalAmount'] ?? 0;
     final List<dynamic> items = orderData['items'] ?? [];
 
-    // Generate status display text
     String statusText;
     switch (status) {
+      case 'pending':
+        statusText = 'Menunggu Konfirmasi';
+        break;
       case 'processing':
         statusText = 'Sedang Diproses';
         break;
@@ -220,7 +216,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
         statusText = 'Pesanan Selesai';
         break;
       default:
-        statusText = 'Sedang Diproses';
+        statusText = 'Menunggu Konfirmasi';
     }
 
     return GestureDetector(
@@ -242,7 +238,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kiri: Order Info
+              // Kiri
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +260,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
                   ],
                 ),
               ),
-              // Kanan: Status dan Total
+              // Kanan
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -293,7 +289,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     );
   }
 
-  // Helper method to show a compact version of the order ID
   String _formatOrderId(String orderId) {
     if (orderId.length > 3) {
       return orderId.substring(orderId.length - 3);
@@ -301,17 +296,13 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     return orderId;
   }
 
-  // Method to display item images with +X more if needed
   Widget _buildItemImages(List<dynamic> items) {
-    if (items.isEmpty) {
-      return const SizedBox();
-    }
+    if (items.isEmpty) return const SizedBox();
 
     const int maxImagesToShow = 2;
     final int totalItems = items.length;
     final List<Widget> imageWidgets = [];
 
-    // Add images for the first maxImagesToShow items
     for (int i = 0; i < totalItems && i < maxImagesToShow; i++) {
       final item = items[i];
       final String imagePath = item['imagePath'] ?? '';
@@ -338,7 +329,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       );
     }
 
-    // Add "+X more" circle if there are more items than we're showing
     if (totalItems > maxImagesToShow) {
       final int extraItems = totalItems - maxImagesToShow;
       imageWidgets.add(
