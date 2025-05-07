@@ -177,14 +177,12 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
             _buildSettingItem(
               HugeIcons.strokeRoundedCircleLock01,
               'Ubah Kata Sandi',
-            ),
-            _buildSettingItem(
-              HugeIcons.strokeRoundedGlobe02,
-              'Preferensi Bahasa',
+              _showChangePasswordSheet,
             ),
             _buildSettingItem(
               HugeIcons.strokeRoundedNotification02,
               'Notifikasi',
+              _showNotificationSheet,
             ),
             _buildAlamatItem(),
             const SizedBox(height: 24),
@@ -196,6 +194,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
             _buildSettingItem(
               HugeIcons.strokeRoundedSecurityLock,
               'Kelola Privasi',
+              _showPrivacySheet,
             ),
             const SizedBox(height: 24),
             _buildLogoutButton(),
@@ -252,14 +251,14 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     );
   }
 
-  Widget _buildSettingItem(IconData icon, String title) {
+  Widget _buildSettingItem(IconData icon, String title, VoidCallback onTap) {
     return Column(
       children: [
         ListTile(
           leading: Icon(icon, color: xprimaryColor),
           title: Text(title),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () {},
+          onTap: onTap,
         ),
         const Divider(height: 1),
       ],
@@ -327,6 +326,220 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showChangePasswordSheet() {
+    bool _obscureCurrent = true;
+    bool _obscureNew = true;
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: MediaQuery.of(context).viewInsets,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ubah Kata Sandi',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: currentPasswordController,
+                      obscureText: _obscureCurrent,
+                      decoration: InputDecoration(
+                        hintText: 'Kata sandi saat ini',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureCurrent
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureCurrent = !_obscureCurrent;
+                            });
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newPasswordController,
+                      obscureText: _obscureNew,
+                      decoration: InputDecoration(
+                        hintText: 'Kata sandi baru',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureNew
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureNew = !_obscureNew;
+                            });
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        hintText: 'Konfirmasi kata sandi baru',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Batal',
+                              style: TextStyle(color: Colors.black87),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Validasi dan simpan kata sandi baru (belum diimplementasikan)
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: xprimaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text(
+                              'Simpan',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showNotificationSheet() {
+    bool isNotificationOn = true;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pengaturan Notifikasi',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Aktifkan Notifikasi'),
+                      Switch(
+                        value: isNotificationOn,
+                        onChanged: (value) {
+                          setState(() {
+                            isNotificationOn = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Fitur ini masih dalam pengembangan.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPrivacySheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return const Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Kelola Privasi',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Bingung mau diisi apa...',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -308,7 +308,7 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
 
       imageWidgets.add(
         Padding(
-          padding: const EdgeInsets.only(right: 4),
+          padding: const EdgeInsets.only(right: 8),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(100),
             child:
@@ -331,23 +331,20 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     if (items.length > maxImagesToShow) {
       final int extraItems = items.length - maxImagesToShow;
       imageWidgets.add(
-        Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              color: xprimaryColor.withOpacity(0.8),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '+$extraItems',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+        Container(
+          width: 55,
+          height: 55,
+          decoration: BoxDecoration(
+            color: xprimaryColor,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '+$extraItems',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
           ),
