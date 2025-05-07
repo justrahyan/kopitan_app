@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/pages/auth_service.dart';
-import 'package:kopitan_app/pages/admin_dashboard_screen.dart';
+import 'package:kopitan_app/widgets/admin_dashboard_screen.dart';
 import 'package:kopitan_app/pages/register_screen.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
