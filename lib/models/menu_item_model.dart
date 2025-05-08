@@ -4,6 +4,7 @@ class MenuItemModel {
   final String imageUrl;
   final int price;
   final String category;
+  final int stock;
 
   MenuItemModel({
     required this.id,
@@ -11,6 +12,7 @@ class MenuItemModel {
     required this.imageUrl,
     required this.price,
     required this.category,
+    required this.stock,
   });
 
   factory MenuItemModel.fromFirestore(Map<String, dynamic> data, String docId) {
@@ -20,6 +22,7 @@ class MenuItemModel {
       imageUrl: data['imageUrl'] ?? '',
       price: data['price'] ?? 0,
       category: data['category'] ?? '',
+      stock: data['stock'] ?? 0,
     );
   }
 }

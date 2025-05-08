@@ -201,73 +201,98 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
             ),
             itemBuilder: (context, index) {
               final menu = menuList[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => MenuDetailPage(
-                            name: menu.name,
-                            price: 'Rp. ${menu.price}',
-                            imagePath: menu.imageUrl,
-                          ),
-                    ),
-                  );
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 5),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(5),
-                          ),
-                          child:
-                              menu.imageUrl.startsWith('http')
-                                  ? Image.network(
-                                    menu.imageUrl,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                  )
-                                  : Image.asset(
-                                    menu.imageUrl,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                  ),
-                        ),
+              return Stack(
+                children: [
+                  GestureDetector(
+                    onTap:
+                        menu.stock > 0
+                            ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => MenuDetailPage(
+                                        name: menu.name,
+                                        price: 'Rp. ${menu.price}',
+                                        imagePath: menu.imageUrl,
+                                      ),
+                                ),
+                              );
+                            }
+                            : null, // tidak bisa diklik kalau habis
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(color: Colors.black12, blurRadius: 5),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              menu.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(5),
                               ),
+                              child:
+                                  menu.imageUrl.startsWith('http')
+                                      ? Image.network(
+                                        menu.imageUrl,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                      )
+                                      : Image.asset(
+                                        menu.imageUrl,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                      ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Rp. ${menu.price}",
-                              style: const TextStyle(color: Colors.grey),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  menu.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Rp. ${menu.price}",
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (menu.stock == 0)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Habis',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               );
             },
           ),

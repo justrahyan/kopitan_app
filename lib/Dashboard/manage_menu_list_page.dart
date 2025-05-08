@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_menu_page.dart';
+import 'package:intl/intl.dart';
 
 class ManageMenuListPage extends StatelessWidget {
   final String category;
@@ -54,6 +55,7 @@ class ManageMenuListPage extends StatelessWidget {
               final name = data['name'] ?? 'Tanpa Nama';
               final imageUrl = data['imageUrl'] ?? '';
               final stock = data['stock'] ?? 0;
+              final price = data['price'] ?? 0;
 
               Widget imageWidget;
               if (imageUrl.startsWith('http')) {
@@ -97,11 +99,13 @@ class ManageMenuListPage extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
+                    // Gambar produk
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: imageWidget,
                     ),
                     const SizedBox(width: 16),
+                    // Informasi produk (nama dan harga)
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,37 +117,71 @@ class ManageMenuListPage extends StatelessWidget {
                               fontSize: 16,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove),
-                                onPressed: () {
-                                  if (stock > 0) {
-                                    FirebaseFirestore.instance
-                                        .collection('menus')
-                                        .doc(doc.id)
-                                        .update({'stock': stock - 1});
-                                  }
-                                },
-                              ),
-                              Text(
-                                'Stok: $stock',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () {
-                                  FirebaseFirestore.instance
-                                      .collection('menus')
-                                      .doc(doc.id)
-                                      .update({'stock': stock + 1});
-                                },
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'Rp ${NumberFormat('#,###', 'id_ID').format(price)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
+                    ),
+                    // Kontrol stok di sebelah kanan
+                    Column(
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                if (stock > 0) {
+                                  FirebaseFirestore.instance
+                                      .collection('menus')
+                                      .doc(doc.id)
+                                      .update({'stock': stock - 1});
+                                }
+                              },
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$stock',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                FirebaseFirestore.instance
+                                    .collection('menus')
+                                    .doc(doc.id)
+                                    .update({'stock': stock + 1});
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Stok',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ],
                 ),

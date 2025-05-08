@@ -58,22 +58,6 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ElevatedButton(
-                onPressed: _deleteYesterdayCompletedOrders,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Hapus Pesanan Selesai Kemarin',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
             TabBar(
               controller: _tabController,
               indicatorColor: Colors.brown,
@@ -103,6 +87,10 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
   }
 
   Widget _buildOrderList(List<String> statuses) {
+    // Mendapatkan waktu tengah malam hari ini
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+
     return StreamBuilder<QuerySnapshot>(
       stream:
           FirebaseFirestore.instance
@@ -115,10 +103,22 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         }
 
         final docs = snapshot.data?.docs ?? [];
+
+        // Filter pesanan berdasarkan status dan tanggal (hanya tampilkan pesanan hari ini)
         final orders =
             docs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              return statuses.contains(data['status']);
+              final timestamp = (data['timestamp'] as Timestamp).toDate();
+
+              // Cek apakah pesanan pada hari ini (atau setelah tengah malam)
+              final isToday =
+                  timestamp.isAfter(startOfToday) ||
+                  (timestamp.year == startOfToday.year &&
+                      timestamp.month == startOfToday.month &&
+                      timestamp.day == startOfToday.day);
+
+              // Hanya tampilkan pesanan dengan status yang sesuai dan dari hari ini
+              return statuses.contains(data['status']) && isToday;
             }).toList();
 
         if (orders.isEmpty) {
@@ -149,6 +149,7 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              color: Colors.white,
               elevation: 3,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -178,23 +179,53 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
                       style: const TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 12),
-                    // Item images
-                    Row(
-                      children:
-                          items.map((item) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(100),
-                                child: Image.asset(
-                                  item['imagePath'] ?? '',
-                                  width: 45,
-                                  height: 45,
-                                  fit: BoxFit.cover,
+                    // Item images dengan indikator +
+                    Stack(
+                      children: [
+                        Row(
+                          children: [
+                            ...items.take(3).map((item) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(100),
+                                  child: Image.asset(
+                                    item['imagePath'] ?? '',
+                                    width: 45,
+                                    height: 45,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                        if (items.length > 3)
+                          Positioned(
+                            left: 130, // Posisi setelah 3 item
+                            child: Container(
+                              width: 45,
+                              height: 45,
+                              decoration: BoxDecoration(
+                                color: xprimaryColor.withOpacity(0.8),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
                                 ),
                               ),
-                            );
-                          }).toList(),
+                              child: Center(
+                                child: Text(
+                                  '+${items.length - 3}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     // Total & Action Button
@@ -280,36 +311,5 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         .collection('order_history')
         .doc(docId)
         .update({'status': newStatus});
-  }
-
-  void _deleteYesterdayCompletedOrders() async {
-    final now = DateTime.now();
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('order_history')
-            .where('status', isEqualTo: 'completed')
-            .get();
-
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final timestamp = (data['timestamp'] as Timestamp).toDate();
-      final isYesterday =
-          timestamp.year == yesterday.year &&
-          timestamp.month == yesterday.month &&
-          timestamp.day == yesterday.day;
-
-      if (isYesterday) {
-        await FirebaseFirestore.instance
-            .collection('order_history')
-            .doc(doc.id)
-            .delete();
-      }
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pesanan selesai kemarin berhasil dihapus')),
-    );
   }
 }

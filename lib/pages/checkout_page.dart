@@ -112,14 +112,69 @@ class _CheckoutPageState extends State<CheckoutPage>
     }
   }
 
+  Future<void> reduceMenuStock(List<Map<String, dynamic>> orderItems) async {
+    // Get a reference to the menus collection
+    final menusRef = FirebaseFirestore.instance.collection('menus');
+
+    // For each ordered item, find the corresponding menu item and reduce its stock
+    for (var item in orderItems) {
+      final String itemName = item['name'];
+      final int quantity = item['quantity'];
+
+      // Query to find the menu with matching name
+      final menuQuery = await menusRef.where('name', isEqualTo: itemName).get();
+
+      if (menuQuery.docs.isNotEmpty) {
+        for (var menuDoc in menuQuery.docs) {
+          final currentStock = menuDoc.data()['stock'] ?? 0;
+
+          // Ensure stock doesn't go below zero
+          final newStock =
+              currentStock >= quantity ? currentStock - quantity : 0;
+
+          // Update the stock in Firestore
+          await menuDoc.reference.update({'stock': newStock});
+          print('Updated stock for $itemName: $currentStock -> $newStock');
+        }
+      } else {
+        print('Menu item not found: $itemName');
+      }
+    }
+  }
+
   Future<void> handleTransactionSuccess() async {
     final String orderId =
         _currentOrderId ?? "ORDER-${DateTime.now().millisecondsSinceEpoch}";
+
+    // Get order items before clearing them
+    final user = FirebaseAuth.instance.currentUser;
+    List<Map<String, dynamic>> orderItems = [];
+
+    if (user != null) {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        orderItems.add({
+          'name': data['name'] ?? 'Unknown Item',
+          'quantity': data['quantity'] ?? 1,
+        });
+      }
+    }
+
     await saveOrderToHistory(
       orderId: orderId,
       totalAmount: await calculateTotalPrice(),
       paymentMethod: selectedPaymentMethod,
     );
+
+    // Reduce stock for each ordered item
+    await reduceMenuStock(orderItems);
+
     await clearUserOrders();
 
     if (!context.mounted) return; // mencegah error jika context tidak tersedia

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kopitan_app/colors.dart';
-import 'package:kopitan_app/pages/admin_order_screen.dart';
-import 'package:kopitan_app/pages/admin_profile_screen.dart';
+import 'package:kopitan_app/Dashboard/admin_order_screen.dart';
+import 'package:kopitan_app/Dashboard/admin_profile_screen.dart';
 
 class AdminHomeScreen extends StatelessWidget {
   const AdminHomeScreen({super.key});
