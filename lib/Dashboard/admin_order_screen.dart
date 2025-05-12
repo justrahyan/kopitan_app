@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:kopitan_app/Dashboard/admin_order_history.dart';
 import 'package:kopitan_app/colors.dart';
 
 class AdminOrderListPage extends StatefulWidget {
@@ -36,36 +37,57 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset(
-                    'assets/images/logo-kopitan-primary.png',
-                    height: 50,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'KOPITAN',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/logo-kopitan-primary.png',
+                        height: 50,
                       ),
-                      Text('Tempat Kongkow Kongkow'),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'KOPITAN',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text('Tempat Kongkow Kongkow'),
+                        ],
+                      ),
                     ],
+                  ),
+                  IconButton(
+                    icon: Image.asset(
+                      'assets/images/history-primary.png',
+                      width: 28,
+                      height: 28,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminOrderHistoryPage(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
             TabBar(
               controller: _tabController,
-              indicatorColor: Colors.brown,
-              labelColor: Colors.brown,
+              indicatorColor: xprimaryColor,
+              labelColor: xprimaryColor,
+              // labelStyle: const TextStyle(fontSize: 12),
               unselectedLabelColor: Colors.black,
               tabs: const [
-                Tab(text: 'Pesanan Masuk'),
-                Tab(text: 'Sedang Di Proses'),
+                Tab(text: 'Order Masuk'),
+                Tab(text: 'Proses'),
                 Tab(text: 'Selesai'),
               ],
             ),
@@ -233,7 +255,7 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Rp ${NumberFormat('#,###', 'id_ID').format(totalAmount)}',

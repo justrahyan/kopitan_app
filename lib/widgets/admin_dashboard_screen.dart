@@ -13,44 +13,55 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  int currentIndex = 0;
+  int indexMenu = 0;
 
   final List<Map<String, dynamic>> menu = [
-    {'icon': Icons.home, 'label': 'Beranda', 'screen': const AdminHomeScreen()},
     {
-      'icon': Icons.receipt_long,
-      'label': 'Pesanan',
-      'screen': const AdminOrderListPage(),
+      'iconActive': 'assets/images/home-primary.png',
+      'iconInactive': 'assets/images/home-secondary.png',
+      'screen': const AdminHomeScreen(),
     },
     {
-      'icon': Icons.fastfood,
-      'label': 'Tambah Menu',
+      'iconActive': 'assets/images/receipt-primary.png',
+      'iconInactive': 'assets/images/receipt-secondary.png',
+      'screen': AdminOrderListPage(),
+    },
+    {
+      'iconActive': 'assets/images/drink-primary.png',
+      'iconInactive': 'assets/images/drink-secondary.png',
       'screen': const SelectMenuCategoryPage(),
     },
     {
-      'icon': Icons.person,
-      'label': 'Akun',
-      'screen': const AdminProfileScreen(),
+      'iconActive': 'assets/images/user-primary.png',
+      'iconInactive': 'assets/images/user-secondary.png',
+      'screen': AdminProfileScreen(),
     },
   ];
+
+  /// Untuk pindah tab biasa (misalnya saat klik alamat)
+  void switchToTab(int index) {
+    setState(() {
+      indexMenu = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      body: menu[indexMenu]['screen'],
       backgroundColor: Colors.white,
-      body: menu[currentIndex]['screen'],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15),
         child: Row(
           children: List.generate(menu.length, (index) {
-            final isActive = index == currentIndex;
+            bool isActive = index == indexMenu;
             final item = menu[index];
 
             return Expanded(
               child: InkWell(
                 onTap: () {
                   setState(() {
-                    currentIndex = index;
+                    indexMenu = index;
                   });
                 },
                 child: SizedBox(
@@ -58,17 +69,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(height: 16),
-                      Icon(
-                        item['icon'],
-                        color: isActive ? xprimaryColor : Colors.grey,
-                        size: 28,
+                      const SizedBox(height: 20),
+                      Image.asset(
+                        isActive ? item['iconActive'] : item['iconInactive'],
+                        width: 26,
+                        height: 26,
                       ),
-                      if (isActive) const SizedBox(height: 6),
+                      if (isActive) const SizedBox(height: 7),
                       if (isActive)
                         Container(
-                          height: 4,
-                          width: 12,
+                          height: 5,
+                          width: 10,
                           decoration: BoxDecoration(
                             color: xprimaryColor,
                             borderRadius: BorderRadius.circular(20),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:kopitan_app/Dashboard/admin_order_history.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/Dashboard/admin_order_screen.dart';
 import 'package:kopitan_app/Dashboard/admin_profile_screen.dart';
@@ -68,7 +70,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/logo-kopitan-primary.png',
+                      'assets/images/logo-kopitan-white.png',
                       height: 50,
                     ),
                     const SizedBox(width: 12),
@@ -95,7 +97,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const AdminProfileScreen(),
+                            builder: (_) => AdminProfileScreen(),
                           ),
                         );
                       },
@@ -160,25 +162,29 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _iconButton(
-                        icon: Icons.fastfood,
-                        label: 'Kelola Menu',
+                        iconWidget: Image.asset(
+                          'assets/images/history-primary.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        label: 'Riwayat',
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const SelectMenuCategoryPage(),
+                              builder: (_) => const AdminOrderHistoryPage(),
                             ),
                           );
                         },
                       ),
                       _iconButton(
                         icon: Icons.receipt_long,
-                        label: 'Pesanan',
+                        label: 'Menu Baru',
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const AdminOrderListPage(),
+                              builder: (_) => const SelectMenuCategoryPage(),
                             ),
                           );
                         },
@@ -190,7 +196,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const AdminProfileScreen(),
+                              builder: (_) => AdminProfileScreen(),
                             ),
                           );
                         },
@@ -253,11 +259,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.brown,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -266,7 +268,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   static Widget _iconButton({
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String label,
     required VoidCallback onTap,
   }) {
@@ -281,7 +284,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               border: Border.all(),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: xprimaryColor, size: 28),
+            child: Center(
+              child: iconWidget ?? Icon(icon, color: xprimaryColor, size: 28),
+            ),
           ),
         ),
         const SizedBox(height: 6),
