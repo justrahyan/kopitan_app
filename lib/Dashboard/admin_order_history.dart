@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_launcher_icons/main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:kopitan_app/Dashboard/admin_generate_report.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -65,6 +66,60 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Widget _buildReportCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade300, // warna border
+          width: 1, // ketebalan border
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.1),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -248,9 +303,13 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
                           margin: const EdgeInsets.only(bottom: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.grey.shade300, // warna border
+                              width: 1, // ketebalan border
+                            ),
                           ),
                           color: Colors.white,
-                          elevation: 3,
+                          elevation: 0,
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
@@ -362,7 +421,7 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
               ),
             ],
           ),
-          const Center(child: Text('Kosong')),
+          const ReportsTab(),
         ],
       ),
     );

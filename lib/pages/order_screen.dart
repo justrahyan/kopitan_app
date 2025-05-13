@@ -227,8 +227,14 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       },
       child: Card(
         color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: Colors.grey.shade300, // warna border
+            width: 1, // ketebalan border
+          ),
+        ),
+        elevation: 0,
         margin: const EdgeInsets.only(bottom: 16),
         child: Padding(
           padding: const EdgeInsets.all(18),

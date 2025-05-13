@@ -224,9 +224,10 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black12, blurRadius: 5),
-                        ],
+                        border: Border.all(
+                          color: Colors.grey.shade300, // warna border
+                          width: 1, // ketebalan border
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

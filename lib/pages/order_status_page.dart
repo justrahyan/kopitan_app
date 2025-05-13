@@ -33,56 +33,113 @@ class SwipeToUseCodeWidget extends StatefulWidget {
 }
 
 class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
+  double _dragExtent = 0.0;
+  final double _maxDrag = 260.0;
+  bool _revealed = false;
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _dragExtent += details.primaryDelta!;
+      if (_dragExtent < 0) _dragExtent = 0;
+      if (_dragExtent > _maxDrag) _dragExtent = _maxDrag;
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragExtent > _maxDrag * 0.8) {
+      setState(() {
+        _revealed = true;
+        widget.onCodeUsed();
+      });
+    } else {
+      setState(() {
+        _dragExtent = 0;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return widget.swiped
-        ? Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: xprimaryColor,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _showBottomSheet,
-            child: const Text('Kode Siap Digunakan'),
-          ),
-        )
-        : GestureDetector(
-          onHorizontalDragEnd: (_) {
-            if (!widget.swiped) {
-              widget.onCodeUsed();
-            }
-          },
+    final backgroundColor = xprimaryColor.withOpacity(0.7);
+    final foregroundColor = xprimaryColor;
+    final fullWidth =
+        MediaQuery.of(context).size.width - 32; // padding 16 left + right
 
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              decoration: BoxDecoration(
-                color: xprimaryColor.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.arrow_right_alt, color: Colors.white, size: 28),
-                  SizedBox(width: 12),
-                  Text(
-                    'Swipe untuk tampilkan kode',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+    if (_revealed || widget.swiped) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: xprimaryColor,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _showBottomSheet,
+          child: const Text('Kode Siap Digunakan'),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Stack(
+        children: [
+          // Background text
+          Container(
+            height: 56,
+            width: fullWidth,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'Swipe untuk tampilkan kode',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-        );
+
+          // Swipe foreground with animated icon
+          GestureDetector(
+            onHorizontalDragUpdate: _handleDragUpdate,
+            onHorizontalDragEnd: _handleDragEnd,
+            child: Stack(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 100),
+                  height: 56,
+                  width: _dragExtent.clamp(56, fullWidth),
+                  decoration: BoxDecoration(
+                    color: foregroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+
+                // Moving Icon
+                Positioned(
+                  left: (_dragExtent.clamp(
+                    16,
+                    fullWidth - 40,
+                  )), // move icon along drag
+                  top: 14,
+                  child: const Icon(
+                    Icons.arrow_right_alt,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showBottomSheet() {
@@ -282,9 +339,13 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                               ),
                               child: Card(
                                 color: Colors.white,
-                                elevation: 1,
+                                elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: Colors.grey.shade300, // warna border
+                                    width: 1, // ketebalan border
+                                  ),
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
@@ -315,9 +376,13 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             child: Card(
                               color: Colors.white,
-                              elevation: 1,
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300, // warna border
+                                  width: 1, // ketebalan border
+                                ),
                               ),
                               child: Column(
                                 children: [
@@ -347,9 +412,13 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             ),
                             child: Card(
                               color: Colors.white,
-                              elevation: 1,
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300, // warna border
+                                  width: 1, // ketebalan border
+                                ),
                               ),
                               child: Column(
                                 children: [
@@ -378,9 +447,13 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                             padding: const EdgeInsets.all(16.0),
                             child: Card(
                               color: Colors.white,
-                              elevation: 1,
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300, // warna border
+                                  width: 1, // ketebalan border
+                                ),
                               ),
                               child: Column(
                                 children: [
@@ -464,7 +537,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
               width: 300,
               fit: BoxFit.cover,
             ),
-            const SizedBox(height: 40), // Adding space at the bottom
           ],
         );
       case 'completed':

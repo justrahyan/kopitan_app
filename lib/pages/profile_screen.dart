@@ -31,6 +31,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -201,7 +202,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
           ],
         ),
       ),
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Colors.white,
     );
   }
 
@@ -211,9 +212,10 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5),
-        ],
+        border: Border.all(
+          color: Colors.grey.shade300, // warna border
+          width: 1, // ketebalan border
+        ),
       ),
       child: Row(
         children: [
@@ -302,7 +304,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: xsecondaryColor,
+          backgroundColor: xprimaryColor,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -339,6 +341,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -466,6 +469,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -518,6 +522,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
   void _showPrivacySheet() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),

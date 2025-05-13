@@ -171,9 +171,13 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
               margin: const EdgeInsets.only(bottom: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Colors.grey.shade300, // warna border
+                  width: 1, // ketebalan border
+                ),
               ),
               color: Colors.white,
-              elevation: 3,
+              elevation: 0,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(

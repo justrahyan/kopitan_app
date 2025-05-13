@@ -194,12 +194,15 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
               }
 
               final menuList =
-                  snapshot.data!.docs.map((doc) {
-                    return MenuItemModel.fromFirestore(
-                      doc.data() as Map<String, dynamic>,
-                      doc.id,
-                    );
-                  }).toList();
+                  snapshot.data!.docs
+                      .map((doc) {
+                        return MenuItemModel.fromFirestore(
+                          doc.data() as Map<String, dynamic>,
+                          doc.id,
+                        );
+                      })
+                      .where((menu) => menu.stock > 0)
+                      .toList();
 
               return SizedBox(
                 height: 200,
@@ -344,7 +347,10 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+        border: Border.all(
+          color: Colors.grey.shade300, // warna border
+          width: 1, // ketebalan border
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

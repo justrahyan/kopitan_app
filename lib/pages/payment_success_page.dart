@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kopitan_app/colors.dart';
 import 'dart:async';
 import 'order_status_page.dart';
 
@@ -86,7 +87,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
+                backgroundColor: xprimaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 40,
