@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/Dashboard/admin_order_history.dart';
+import 'package:kopitan_app/Dashboard/recommended_menu_page.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/Dashboard/admin_order_screen.dart';
 import 'package:kopitan_app/Dashboard/admin_profile_screen.dart';
@@ -179,12 +180,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       ),
                       _iconButton(
                         icon: Icons.receipt_long,
-                        label: 'Menu Baru',
+                        label: 'Rekomendasi',
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const SelectMenuCategoryPage(),
+                              builder: (_) => const RecommendedMenuPage(),
                             ),
                           );
                         },

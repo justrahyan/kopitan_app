@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
+import 'dart:math';
 
 class OrderStatusPage extends StatefulWidget {
   final String? orderId;
@@ -14,12 +15,145 @@ class OrderStatusPage extends StatefulWidget {
   State<OrderStatusPage> createState() => _OrderStatusPageState();
 }
 
+class SwipeToUseCodeWidget extends StatefulWidget {
+  final VoidCallback onCodeUsed;
+  final String orderId;
+  final BuildContext parentContext;
+  final bool swiped;
+
+  const SwipeToUseCodeWidget({
+    required this.onCodeUsed,
+    required this.orderId,
+    required this.parentContext,
+    required this.swiped,
+  });
+
+  @override
+  State<SwipeToUseCodeWidget> createState() => _SwipeToUseCodeWidgetState();
+}
+
+class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return widget.swiped
+        ? Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: xprimaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: _showBottomSheet,
+            child: const Text('Kode Siap Digunakan'),
+          ),
+        )
+        : GestureDetector(
+          onHorizontalDragEnd: (_) {
+            if (!widget.swiped) {
+              widget.onCodeUsed();
+            }
+          },
+
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              decoration: BoxDecoration(
+                color: xprimaryColor.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.arrow_right_alt, color: Colors.white, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Swipe untuk tampilkan kode',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+  }
+
+  void _showBottomSheet() {
+    showModalBottomSheet(
+      context: widget.parentContext,
+      builder:
+          (_) => FutureBuilder<QuerySnapshot>(
+            future:
+                FirebaseFirestore.instance
+                    .collection('order_history')
+                    .where('orderId', isEqualTo: widget.orderId)
+                    .limit(1)
+                    .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Data pesanan tidak ditemukan.',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                );
+              }
+
+              final doc = snapshot.data!.docs.first;
+              final code = doc['pickupCode'] ?? '0000';
+
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Kode Pickup', style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 16),
+                    Text(
+                      code,
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Tunjukkan kode ini ke barista saat pengambilan di kasir.',
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Selesai'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+    );
+  }
+}
+
 class _OrderStatusPageState extends State<OrderStatusPage> {
   final currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp. ',
     decimalDigits: 0,
   );
+  bool codeUsed = false;
+  bool codeSwiped = false;
 
   @override
   Widget build(BuildContext context) {
@@ -78,78 +212,136 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
 
               return Stack(
                 children: [
+                  // Main scrollable content
                   SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          color: xthirdColor,
-                          padding: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20.0,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: status == 'ready' ? 120 : 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            color: xthirdColor,
+                            padding: const EdgeInsets.only(top: 20, bottom: 0),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20.0,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildProgressStep(
+                                        icon: "refresh",
+                                        label: 'Sedang\nDiproses',
+                                        active: status == 'processing',
+                                        isFirst: true,
+                                        isCompleted:
+                                            status == 'ready' ||
+                                            status == 'completed',
+                                      ),
+                                      _buildProgressLine(
+                                        isActive:
+                                            status == 'ready' ||
+                                            status == 'completed',
+                                        topPadding: 25,
+                                      ),
+                                      _buildProgressStep(
+                                        icon: "package",
+                                        label: 'Siap\nDi-Pickup',
+                                        active: status == 'ready',
+                                        isCompleted: status == 'completed',
+                                      ),
+                                      _buildProgressLine(
+                                        isActive: status == 'completed',
+                                        topPadding: 25,
+                                      ),
+                                      _buildProgressStep(
+                                        icon: "check_circle",
+                                        label: 'Pesanan\nSelesai',
+                                        active: status == 'completed',
+                                        isLast: true,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _buildProgressStep(
-                                      icon: "refresh",
-                                      label: 'Sedang\nDiproses',
-                                      active: status == 'processing',
-                                      isFirst: true,
-                                      isCompleted:
-                                          status == 'ready' ||
-                                          status == 'completed',
-                                    ),
-                                    _buildProgressLine(
-                                      isActive:
-                                          status == 'ready' ||
-                                          status == 'completed',
-                                    ),
-                                    _buildProgressStep(
-                                      icon: "package",
-                                      label: 'Siap\nDi-Pickup',
-                                      active: status == 'ready',
-                                      isCompleted: status == 'completed',
-                                    ),
-                                    _buildProgressLine(
-                                      isActive: status == 'completed',
-                                    ),
-                                    _buildProgressStep(
-                                      icon: "check_circle",
-                                      label: 'Pesanan\nSelesai',
-                                      active: status == 'completed',
-                                      isLast: true,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              const Text(
-                                'Nomor Order',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                              Text(
-                                _formatOrderId(orderId),
-                                style: const TextStyle(
-                                  fontSize: 46,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                            ],
+                                const SizedBox(height: 48),
+                                _buildOrderIdentifier(status, orderId),
+                              ],
+                            ),
                           ),
-                        ),
-                        Transform.translate(
-                          offset: const Offset(0, -40),
-                          child: Padding(
+                          Transform.translate(
+                            offset: const Offset(0, -20),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                              ),
+                              child: Card(
+                                color: Colors.white,
+                                elevation: 1,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _getStatusMessage(status),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _getStatusDescription(status),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Card(
+                              color: Colors.white,
+                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildSectionHeader(
+                                    'Detail Pesanan',
+                                    DateFormat(
+                                      'dd MMM yyyy, HH:mm',
+                                    ).format(timestamp.toDate()),
+                                  ),
+                                  _buildInfoRow(
+                                    icon: Icons.person_outline,
+                                    label: 'Nama Pelanggan',
+                                    value: customerName,
+                                  ),
+                                  _buildInfoRow(
+                                    icon: Icons.location_on_outlined,
+                                    label: 'Pickup di',
+                                    value: 'Perintis Kemerdekaan',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16.0,
                             ),
@@ -159,128 +351,86 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      _getStatusMessage(status),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
+                              child: Column(
+                                children: [
+                                  _buildSectionHeader(
+                                    'Pesanan',
+                                    'Total ${items.length} items',
+                                  ),
+                                  ...items.map(
+                                    (item) => _buildOrderItemTile(
+                                      name: item['name'] ?? 'Unknown Item',
+                                      desc:
+                                          '${item['temperature'] ?? '-'}, ${item['size'] ?? '-'}',
+                                      price: currencyFormat.format(
+                                        item['totalPrice'] ?? 0,
                                       ),
+                                      quantity: item['quantity'] ?? 1,
+                                      imagePath: item['imagePath'] ?? '',
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _getStatusDescription(status),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Card(
-                            color: Colors.white,
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              children: [
-                                _buildSectionHeader(
-                                  'Detail Pesanan',
-                                  DateFormat(
-                                    'dd MMM yyyy, HH:mm',
-                                  ).format(timestamp.toDate()),
-                                ),
-                                _buildInfoRow(
-                                  icon: Icons.person_outline,
-                                  label: 'Nama Pelanggan',
-                                  value: customerName,
-                                ),
-                                _buildInfoRow(
-                                  icon: Icons.location_on_outlined,
-                                  label: 'Pickup di',
-                                  value: 'Perintis Kemerdekaan',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Card(
-                            color: Colors.white,
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              children: [
-                                _buildSectionHeader(
-                                  'Pesanan',
-                                  'Total ${items.length} items',
-                                ),
-                                ...items.map(
-                                  (item) => _buildOrderItemTile(
-                                    name: item['name'] ?? 'Unknown Item',
-                                    desc:
-                                        '${item['temperature'] ?? '-'}, ${item['size'] ?? '-'}',
-                                    price: currencyFormat.format(
-                                      item['totalPrice'] ?? 0,
-                                    ),
-                                    quantity: item['quantity'] ?? 1,
-                                    imagePath: item['imagePath'] ?? '',
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Card(
+                              color: Colors.white,
+                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildSectionHeader(
+                                    'Detail Pembayaran',
+                                    DateFormat(
+                                      'dd MMM yyyy, HH:mm',
+                                    ).format(timestamp.toDate()),
                                   ),
-                                ),
-                              ],
+                                  _buildPaymentInfoRow(
+                                    label: 'Total Pesanan',
+                                    value: currencyFormat.format(totalAmount),
+                                  ),
+                                  _buildPaymentInfoRow(
+                                    label: 'Transaksi ID',
+                                    value: orderId.substring(
+                                      orderId.length - 6,
+                                    ),
+                                  ),
+                                  _buildPaymentMethodRow(
+                                    paymentMethod: paymentMethod,
+                                    value: currencyFormat.format(totalAmount),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Card(
-                            color: Colors.white,
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              children: [
-                                _buildSectionHeader(
-                                  'Detail Pembayaran',
-                                  DateFormat(
-                                    'dd MMM yyyy, HH:mm',
-                                  ).format(timestamp.toDate()),
-                                ),
-                                _buildPaymentInfoRow(
-                                  label: 'Total Pesanan',
-                                  value: currencyFormat.format(totalAmount),
-                                ),
-                                _buildPaymentInfoRow(
-                                  label: 'Transaksi ID',
-                                  value: orderId.substring(orderId.length - 6),
-                                ),
-                                _buildPaymentMethodRow(
-                                  paymentMethod: paymentMethod,
-                                  value: currencyFormat.format(totalAmount),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
+                          const SizedBox(height: 40),
+                        ],
+                      ),
                     ),
                   ),
+
+                  // Swipe to use code muncul hanya jika status = 'ready'
+                  if (status == 'ready')
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: SwipeToUseCodeWidget(
+                          orderId: orderId,
+                          onCodeUsed: () => setState(() => codeSwiped = true),
+                          parentContext: context,
+                          swiped: codeSwiped,
+                        ),
+                      ),
+                    ),
                 ],
               );
             },
@@ -288,6 +438,56 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
         },
       ),
     );
+  }
+
+  Widget _buildOrderIdentifier(String status, String orderId) {
+    switch (status) {
+      case 'processing':
+        return Column(
+          children: [
+            const Text(
+              'Nomor Order',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            Text(
+              _formatOrderId(orderId),
+              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
+          ],
+        );
+      case 'ready':
+        return Column(
+          children: [
+            Image.asset(
+              'assets/images/status/siap-pickup.png',
+              width: 300,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(height: 40), // Adding space at the bottom
+          ],
+        );
+      case 'completed':
+        return Image.asset(
+          'assets/images/status/selesai.png',
+          width: 210,
+          fit: BoxFit.cover,
+        );
+      default:
+        return Column(
+          children: [
+            const Text(
+              'Nomor Order',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            Text(
+              _formatOrderId(orderId),
+              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
+          ],
+        );
+    }
   }
 
   String _formatOrderId(String orderId) {
@@ -400,11 +600,15 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     );
   }
 
-  Widget _buildProgressLine({bool isActive = false}) {
+  Widget _buildProgressLine({bool isActive = false, double topPadding = 0.0}) {
     return Expanded(
       child: Container(
-        height: 2,
-        color: isActive ? xprimaryColor : Colors.grey[300],
+        alignment: Alignment.center,
+        padding: EdgeInsets.only(top: topPadding),
+        child: Container(
+          height: 2,
+          color: isActive ? xprimaryColor : Colors.grey[300],
+        ),
       ),
     );
   }
@@ -608,22 +812,25 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   }
 
   Widget _getPaymentMethodLogo(String paymentMethod) {
-    IconData iconData;
+    Widget iconData;
 
     switch (paymentMethod.toLowerCase()) {
       case 'qris':
-        iconData = Icons.qr_code;
+        iconData = Image.asset('assets/images/pembayaran/qris.png', width: 52);
         break;
-      case 'cash':
-        iconData = Icons.money;
+      case 'gopay':
+        iconData = Image.asset('assets/images/pembayaran/gopay.png', width: 52);
         break;
-      case 'credit_card':
-        iconData = Icons.credit_card;
+      case 'dana':
+        iconData = Image.asset('assets/images/pembayaran/dana.png', width: 52);
         break;
       default:
-        iconData = Icons.payment;
+        iconData = Icon(
+          Icons.payment,
+          size: 24, // Atur ukuran ikon default
+        );
     }
 
-    return Icon(iconData, size: 24);
+    return iconData;
   }
 }

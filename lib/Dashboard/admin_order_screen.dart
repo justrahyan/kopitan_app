@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/Dashboard/admin_order_history.dart';
 import 'package:kopitan_app/colors.dart';
+import 'dart:math';
 
 class AdminOrderListPage extends StatefulWidget {
   const AdminOrderListPage({super.key});
@@ -283,6 +284,22 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
   }
 
   Widget _buildActionButton(String status, String docId) {
+    if (status == 'ready') {
+      return ElevatedButton(
+        onPressed: () => _showKodeValidationSheet(context, docId),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: xprimaryColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text(
+          'Masukkan Kode',
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+
     String label = '';
     String nextStatus = '';
 
@@ -295,12 +312,8 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         label = 'Siap Pick Up';
         nextStatus = 'ready';
         break;
-      case 'ready':
-        label = 'Selesaikan';
-        nextStatus = 'completed';
-        break;
       default:
-        return const SizedBox();
+        return const SizedBox(); // Tidak ada tombol untuk status lainnya
     }
 
     return ElevatedButton(
@@ -329,9 +342,80 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
   }
 
   void _updateStatus(String docId, String newStatus) async {
+    final Map<String, dynamic> updates = {'status': newStatus};
+
+    // Jika status baru adalah 'ready', generate kode 4 digit dan set codeUsed ke false
+    if (newStatus == 'ready') {
+      final random = Random();
+      final pickupCode = (1000 + random.nextInt(9000)).toString();
+
+      updates['pickupCode'] = pickupCode;
+      updates['codeUsed'] = false;
+    }
+
     await FirebaseFirestore.instance
         .collection('order_history')
         .doc(docId)
-        .update({'status': newStatus});
+        .update(updates);
+  }
+
+  void _showKodeValidationSheet(BuildContext context, String docId) {
+    final controller = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Validasi Kode Pickup',
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Masukkan Kode'),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () async {
+                  final doc =
+                      await FirebaseFirestore.instance
+                          .collection('order_history')
+                          .doc(docId)
+                          .get();
+
+                  if (doc['pickupCode'] == controller.text &&
+                      doc['codeUsed'] == false) {
+                    await FirebaseFirestore.instance
+                        .collection('order_history')
+                        .doc(docId)
+                        .update({'status': 'completed', 'codeUsed': true});
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Kode valid! Status diubah ke selesai.'),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Kode salah atau sudah digunakan.'),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Validasi'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

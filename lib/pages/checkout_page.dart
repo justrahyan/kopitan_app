@@ -24,6 +24,7 @@ class _CheckoutPageState extends State<CheckoutPage>
   String selectedPaymentIcon = '';
   bool _isPaymentInProgress = false;
   String? _currentOrderId;
+  bool _isEditMode = false;
 
   @override
   void initState() {
@@ -46,6 +47,27 @@ class _CheckoutPageState extends State<CheckoutPage>
       // App came back to foreground while payment was in progress
       _checkPaymentStatus();
     }
+  }
+
+  Future<void> deleteOrderItem(String docId) async {
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(docId).delete();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Item berhasil dihapus')));
+    } catch (e) {
+      print('Error deleting order item: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gagal menghapus item')));
+    }
+  }
+
+  // Toggle edit mode
+  void toggleEditMode() {
+    setState(() {
+      _isEditMode = !_isEditMode;
+    });
   }
 
   Future<void> saveOrderToHistory({
@@ -651,51 +673,60 @@ class _CheckoutPageState extends State<CheckoutPage>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        // Close the current checkout page first
-                        Navigator.pop(context);
+                    Row(
+                      children: [
+                        // Add button (existing functionality)
+                        GestureDetector(
+                          onTap: () {
+                            // Close the current checkout page first
+                            Navigator.pop(context);
 
-                        // Find the main screen state and switch to menu tab
-                        final navigatorState = Navigator.of(
-                          context,
-                          rootNavigator: true,
-                        );
-                        navigatorState.popUntil((route) => route.isFirst);
+                            // Find the main screen state and switch to menu tab
+                            final navigatorState = Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            );
+                            navigatorState.popUntil((route) => route.isFirst);
 
-                        // Use Future.delayed to ensure we're back at the main screen before switching tabs
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          final mainScreenState =
-                              navigatorState.context
-                                  .findAncestorStateOfType<
-                                    KopitanAppMainScreenState
-                                  >();
-                          if (mainScreenState != null) {
-                            mainScreenState.switchToTab(
-                              1,
-                            ); // Switch to menu tab (index 1)
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.add, color: Colors.blue, size: 20),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tambah',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            // Use Future.delayed to ensure we're back at the main screen before switching tabs
+                            // Use Future.delayed to ensure we're back at the main screen before switching tabs
+                            Future.delayed(
+                              const Duration(milliseconds: 100),
+                              () {
+                                final mainScreenState =
+                                    navigatorState.context
+                                        .findAncestorStateOfType<
+                                          KopitanAppMainScreenState
+                                        >();
+                                if (mainScreenState != null) {
+                                  mainScreenState.switchToTab(
+                                    1,
+                                  ); // Switch to menu tab (index 1)
+                                }
+                              },
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
                             ),
-                          ],
+                            child: Row(
+                              children: const [
+                                Icon(Icons.add, color: Colors.blue, size: 20),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Tambah',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -789,11 +820,21 @@ class _CheckoutPageState extends State<CheckoutPage>
                           ),
                           Row(
                             children: [
-                              IconButton(
-                                onPressed: () => updateQuantity(quantity - 1),
-                                icon: const Icon(Icons.remove),
-                                splashRadius: 20,
-                              ),
+                              quantity == 1
+                                  ? IconButton(
+                                    onPressed: () => deleteOrderItem(doc.id),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    splashRadius: 20,
+                                  )
+                                  : IconButton(
+                                    onPressed:
+                                        () => updateQuantity(quantity - 1),
+                                    icon: const Icon(Icons.remove),
+                                    splashRadius: 20,
+                                  ),
                               Text('$quantity'),
                               IconButton(
                                 onPressed: () => updateQuantity(quantity + 1),
@@ -802,6 +843,13 @@ class _CheckoutPageState extends State<CheckoutPage>
                               ),
                             ],
                           ),
+
+                          if (_isEditMode)
+                            IconButton(
+                              onPressed: () => deleteOrderItem(doc.id),
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              splashRadius: 20,
+                            ),
                         ],
                       ),
                     );

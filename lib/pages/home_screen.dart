@@ -54,11 +54,13 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 100),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(),
-                    _buildCategorySection("Coffee"),
-                    _buildCategorySection("Non Coffee"),
-                    _buildCategorySection("Freezy"),
+                    const SizedBox(height: 40),
+                    _buildRekomendasiSection(),
+                    const SizedBox(height: 24),
+                    _buildMenuTerbaruSection(),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -165,29 +167,101 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
     );
   }
 
-  Widget _buildCategorySection(String category) {
+  Widget _buildRekomendasiSection() {
     return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header kategori + tombol "Semua"
+          const Text(
+            "Menu Rekomendasi",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<QuerySnapshot>(
+            stream:
+                FirebaseFirestore.instance
+                    .collection('menus')
+                    .where('isRecommended', isEqualTo: true)
+                    .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text('Tidak ada menu rekomendasi'));
+              }
+
+              final menuList =
+                  snapshot.data!.docs.map((doc) {
+                    return MenuItemModel.fromFirestore(
+                      doc.data() as Map<String, dynamic>,
+                      doc.id,
+                    );
+                  }).toList();
+
+              return SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  clipBehavior: Clip.none,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: menuList.length,
+                  itemBuilder: (context, index) {
+                    final menu = menuList[index];
+                    return Container(
+                      width: 160,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => MenuDetailPage(
+                                    name: menu.name,
+                                    price: 'Rp. ${menu.price}',
+                                    imagePath: menu.imageUrl,
+                                  ),
+                            ),
+                          );
+                          if (result == true) setState(() {});
+                        },
+                        child: _buildMenuCard(menu),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTerbaruSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                category,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+              const Text(
+                "Menu",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              GestureDetector(
-                onTap: () {
+              TextButton(
+                onPressed: () {
                   final mainState =
                       context
                           .findAncestorStateOfType<KopitanAppMainScreenState>();
-                  mainState?.switchToMenuTab(category);
+                  mainState?.switchToTab(
+                    1,
+                  ); // asumsikan tab 1 adalah MenuScreen
                 },
                 child: const Text(
                   "Semua",
@@ -201,28 +275,31 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
           ),
           const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot>(
-            stream:
-                FirebaseFirestore.instance
-                    .collection('menus')
-                    .where('category', isEqualTo: category)
-                    .limit(4)
-                    .snapshots(),
+            stream: FirebaseFirestore.instance.collection('menus').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Text("Menu tidak tersedia");
+                return const Center(child: Text('Tidak ada menu'));
               }
 
               final menuList =
-                  snapshot.data!.docs.map((doc) {
-                    return MenuItemModel.fromFirestore(
-                      doc.data() as Map<String, dynamic>,
-                      doc.id,
-                    );
-                  }).toList();
+                  snapshot.data!.docs
+                      .where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        // Filter menu yang tidak direkomendasikan
+                        return data['isRecommended'] == null ||
+                            data['isRecommended'] == false;
+                      })
+                      .map((doc) {
+                        return MenuItemModel.fromFirestore(
+                          doc.data() as Map<String, dynamic>,
+                          doc.id,
+                        );
+                      })
+                      .toList();
 
               return GridView.builder(
                 shrinkWrap: true,
@@ -251,63 +328,65 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                       );
                       if (result == true) setState(() {});
                     },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black12, blurRadius: 5),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(5),
-                              ),
-                              child:
-                                  menu.imageUrl.startsWith('http')
-                                      ? Image.network(
-                                        menu.imageUrl,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      )
-                                      : Image.asset(
-                                        menu.imageUrl,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  menu.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "Rp. ${menu.price}",
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: _buildMenuCard(menu),
                   );
                 },
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuCard(MenuItemModel menu) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(5),
+              ),
+              child:
+                  menu.imageUrl.startsWith('http')
+                      ? Image.network(
+                        menu.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      )
+                      : Image.asset(
+                        menu.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  menu.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Rp. ${menu.price}",
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
           ),
         ],
       ),

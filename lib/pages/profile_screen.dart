@@ -280,7 +280,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
               color: address.isNotEmpty ? Colors.black : Colors.grey,
             ),
           ),
-          trailing: const Icon(HugeIcons.strokeRoundedEdit04),
+          trailing: const Icon(Icons.chevron_right),
           onTap: _showEditAlamatSheet,
         ),
         const Divider(height: 1),
@@ -492,6 +492,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
                       const Text('Aktifkan Notifikasi'),
                       Switch(
                         value: isNotificationOn,
+                        activeColor: xprimaryColor,
                         onChanged: (value) {
                           setState(() {
                             isNotificationOn = value;
