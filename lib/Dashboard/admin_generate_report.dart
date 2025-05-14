@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
 
 class ReportsTab extends StatefulWidget {

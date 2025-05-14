@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:kopitan_app/Dashboard/admin_order_history.dart';
 import 'package:kopitan_app/colors.dart';
 import 'dart:math';
+// Import package untuk notifikasi
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class AdminOrderListPage extends StatefulWidget {
   const AdminOrderListPage({super.key});
@@ -16,10 +18,128 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Inisialisasi FlutterLocalNotificationsPlugin
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  // Simpan ID dokumen pesanan terakhir untuk tracking pesanan baru
+  List<String> _lastOrderIds = [];
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Inisialisasi notifikasi
+    _initNotifications();
+
+    // Mulai listen ke pesanan baru
+    _listenForNewOrders();
+  }
+
+  // Inisialisasi pengaturan notifikasi
+  Future<void> _initNotifications() async {
+    // Pengaturan untuk Android
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // Pengaturan untuk iOS
+    final DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+
+    // Gabungkan pengaturan untuk semua platform
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+    // Inisialisasi plugin dengan pengaturan
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  // Menampilkan notifikasi pesanan baru
+  Future<void> _showNewOrderNotification(
+    String orderId,
+    String customerName,
+  ) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'new_order_channel',
+          'Notifikasi Pesanan Baru',
+          channelDescription: 'Notifikasi saat ada pesanan baru masuk',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+          enableVibration: true,
+          playSound: true,
+        );
+
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Pesanan Baru Masuk!',
+      'Pesanan #$orderId dari $customerName menunggu konfirmasi',
+      platformChannelSpecifics,
+    );
+  }
+
+  // Listen untuk pesanan baru yang masuk
+  void _listenForNewOrders() {
+    // Dapatkan daftar pesanan awal untuk perbandingan
+    FirebaseFirestore.instance
+        .collection('order_history')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('timestamp', descending: true)
+        .limit(10)
+        .get()
+        .then((snapshot) {
+          _lastOrderIds = snapshot.docs.map((doc) => doc.id).toList();
+        });
+
+    // Stream listener untuk pesanan baru dengan status pending
+    FirebaseFirestore.instance
+        .collection('order_history')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+          // Periksa apakah ada dokumen baru
+          for (var doc in snapshot.docs) {
+            if (!_lastOrderIds.contains(doc.id)) {
+              // Ini adalah pesanan baru
+              final data = doc.data();
+              final orderId = data['orderId']?.toString() ?? 'ORDER-XXX';
+              final userName = data['userName'] ?? 'Pelanggan';
+
+              // Tampilkan notifikasi
+              _showNewOrderNotification(
+                orderId.length >= 3
+                    ? orderId.substring(orderId.length - 3)
+                    : orderId,
+                userName,
+              );
+
+              // Tambahkan ID ini ke daftar yang sudah diketahui
+              _lastOrderIds.add(doc.id);
+            }
+          }
+        });
   }
 
   @override
@@ -368,55 +488,73 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
 
     showModalBottomSheet(
       context: context,
-      builder: (_) {
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Validasi Kode Pickup',
-                style: TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Masukkan Kode'),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () async {
-                  final doc =
-                      await FirebaseFirestore.instance
-                          .collection('order_history')
-                          .doc(docId)
-                          .get();
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Validasi Kode Pickup',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Masukkan Kode',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final doc =
+                          await FirebaseFirestore.instance
+                              .collection('order_history')
+                              .doc(docId)
+                              .get();
 
-                  if (doc['pickupCode'] == controller.text &&
-                      doc['codeUsed'] == false) {
-                    await FirebaseFirestore.instance
-                        .collection('order_history')
-                        .doc(docId)
-                        .update({'status': 'completed', 'codeUsed': true});
+                      if (doc['pickupCode'] == controller.text &&
+                          doc['codeUsed'] == false) {
+                        await FirebaseFirestore.instance
+                            .collection('order_history')
+                            .doc(docId)
+                            .update({'status': 'completed', 'codeUsed': true});
 
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Kode valid! Status diubah ke selesai.'),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Kode salah atau sudah digunakan.'),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Validasi'),
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Kode valid! Status diubah ke selesai.',
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Kode salah atau sudah digunakan.'),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      backgroundColor: xprimaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Validasi'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },

@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/models/menu_item_model.dart';
 import 'package:kopitan_app/pages/menu_detail_screen.dart';
-import 'package:kopitan_app/pages/profile_screen.dart';
 import 'package:kopitan_app/widgets/order_bar_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';

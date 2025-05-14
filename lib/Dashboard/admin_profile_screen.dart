@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kopitan_app/Dashboard/edit_admin_profile_screen.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/colors.dart';
 
 class AdminProfileScreen extends StatelessWidget {
   AdminProfileScreen({super.key});
 
   final String adminUid = FirebaseAuth.instance.currentUser!.uid;
+
   String _getFieldKey(String fieldKey) {
     switch (fieldKey) {
       case 'Nama Toko':
@@ -85,7 +86,6 @@ class AdminProfileScreen extends StatelessWidget {
                                   .doc(FirebaseAuth.instance.currentUser!.uid)
                                   .update({_getFieldKey(fieldKey): newValue});
                               Navigator.pop(context);
-                              // Perbarui UI dengan memanggil setState di StatefulWidget (opsional jika diubah ke StatefulWidget)
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Berhasil disimpan'),
@@ -118,6 +118,140 @@ class AdminProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProfileHeader(Map<String, dynamic> userData) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(50),
+            child: Image.asset(
+              'assets/images/logo-kopitan-primary.png',
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  userData['fullname'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  userData['email'] ?? '',
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem(
+    BuildContext context,
+    IconData icon,
+    String fieldKey,
+    String currentValue,
+  ) {
+    return InkWell(
+      onTap: () => _showEditItemSheet(context, fieldKey, currentValue),
+      child: Column(
+        children: [
+          _profileItem(
+            icon,
+            fieldKey,
+            currentValue.isEmpty ? 'Tidak ada data' : currentValue,
+          ),
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileItem(IconData icon, String title, String value) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Icon(icon, color: xprimaryColor),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title, // Tampilkan judul seperti 'Nama Toko', 'Alamat', dll
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.isEmpty
+                      ? 'Tidak ada data'
+                      : value, // Jika kosong tampilkan 'Tidak ada data'
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: () async {
+          await FirebaseAuth.instance.signOut();
+          if (context.mounted) {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: xprimaryColor,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Keluar',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              Icon(
+                HugeIcons.strokeRoundedLogout01,
+                color: Colors.white,
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,7 +268,7 @@ class AdminProfileScreen extends StatelessWidget {
         foregroundColor: Colors.black,
         automaticallyImplyLeading: false,
       ),
-      backgroundColor: const Color(0xFFF9F5F0),
+      backgroundColor: Colors.white,
       body: StreamBuilder<DocumentSnapshot>(
         stream:
             FirebaseFirestore.instance
@@ -151,166 +285,53 @@ class AdminProfileScreen extends StatelessWidget {
 
           final userData = snapshot.data!.data() as Map<String, dynamic>;
 
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        const CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.white,
-                          backgroundImage: AssetImage(
-                            'assets/images/logo-kopitan-primary.png',
-                          ),
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildProfileHeader(userData),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Pengaturan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 4,
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => EditAdminProfileScreen(
-                                        userData: userData,
-                                        uid: adminUid,
-                                      ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: Colors.brown,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      userData['fullname'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    Text(
-                      userData['email'] ?? '',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 30),
-                    GestureDetector(
-                      onTap:
-                          () => _showEditItemSheet(
-                            context,
-                            'Nama Toko',
-                            userData['store_name'] ?? '',
-                          ),
-                      child: _profileItem(
+                      const SizedBox(height: 12),
+                      _buildSettingItem(
+                        context,
                         Icons.store,
                         'Nama Toko',
                         userData['store_name'] ?? '',
                       ),
-                    ),
-                    GestureDetector(
-                      onTap:
-                          () => _showEditItemSheet(
-                            context,
-                            'Alamat',
-                            userData['address'] ?? '',
-                          ),
-                      child: _profileItem(
+                      _buildSettingItem(
+                        context,
                         Icons.location_on,
                         'Alamat',
                         userData['address'] ?? '',
                       ),
-                    ),
-                    GestureDetector(
-                      onTap:
-                          () => _showEditItemSheet(
-                            context,
-                            'Nomor Telepon',
-                            userData['phone'] ?? '',
-                          ),
-                      child: _profileItem(
+                      _buildSettingItem(
+                        context,
                         Icons.phone,
                         'Nomor Telepon',
                         userData['phone'] ?? '',
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                      if (context.mounted) {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: xprimaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Logout',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: _buildLogoutButton(context),
+              ),
+            ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _profileItem(IconData icon, String title, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: xprimaryColor),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 4),
-                Text(value, style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

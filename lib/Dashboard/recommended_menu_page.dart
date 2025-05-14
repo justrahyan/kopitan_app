@@ -72,9 +72,24 @@ class RecommendedMenuPage extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: recommendedDocs.length,
+            itemCount: recommendedDocs.length + 1,
             itemBuilder: (context, index) {
-              final doc = recommendedDocs[index];
+              if (index == 0) {
+                // Tambahkan informasi di bagian atas
+                return const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Tambah menu rekomendasi dari halaman edit menu',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                );
+              }
+
+              final doc = recommendedDocs[index - 1];
               final data = doc.data() as Map<String, dynamic>;
 
               final name = data['name'] ?? 'Tanpa Nama';
@@ -85,7 +100,6 @@ class RecommendedMenuPage extends StatelessWidget {
 
               Widget imageWidget;
               if (imageUrl.startsWith('http')) {
-                // Gambar dari internet (Imgur)
                 imageWidget = Image.network(
                   imageUrl,
                   width: 100,
@@ -104,7 +118,6 @@ class RecommendedMenuPage extends StatelessWidget {
                           const Icon(Icons.broken_image, size: 100),
                 );
               } else {
-                // Gambar dari lokal asset
                 imageWidget = Image.asset(
                   imageUrl,
                   width: 100,
@@ -131,26 +144,20 @@ class RecommendedMenuPage extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFAF7F2),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                    border: Border.all(
+                      color: Colors.grey.shade300, // warna border
+                      width: 1, // ketebalan border
+                    ),
                   ),
                   child: Row(
                     children: [
-                      // Gambar produk
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: imageWidget,
                       ),
                       const SizedBox(width: 16),
-                      // Informasi produk
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,7 +208,6 @@ class RecommendedMenuPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Tombol Rekomendasi
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -227,19 +233,6 @@ class RecommendedMenuPage extends StatelessWidget {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: xprimaryColor,
-        foregroundColor: Colors.white,
-        onPressed: () {
-          // TODO: Tambahkan navigasi ke halaman tambah menu rekomendasi
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tambah menu rekomendasi dari halaman edit menu'),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }

@@ -9,7 +9,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kopitan_app/pages/payment_success_page.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../widgets/order_bar_widget.dart';
+
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -26,11 +27,62 @@ class _CheckoutPageState extends State<CheckoutPage>
   String? _currentOrderId;
   bool _isEditMode = false;
 
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   @override
   void initState() {
     super.initState();
     // Register observer to detect when app comes back to foreground
     WidgetsBinding.instance.addObserver(this);
+    _initNotifications();
+  }
+
+  Future<void> _initNotifications() async {
+    // Pengaturan untuk Android
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // Pengaturan untuk iOS
+    final DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+
+    // Gabungkan pengaturan untuk semua platform
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+    // Inisialisasi plugin dengan pengaturan
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> _showPaymentSuccessNotification(String orderId) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'payment_channel',
+          'Payment Notifications',
+          channelDescription: 'Notifications for payment status',
+          importance: Importance.high,
+          priority: Priority.high,
+          color: Color(0xFF9A534F), // Sesuaikan dengan warna utama jika ada
+          icon: '@mipmap/ic_launcher',
+        );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      2, // ID berbeda dengan notifikasi pickup
+      'Pembayaran Berhasil',
+      'Pesanan #$orderId berhasil dikonfirmasi. Terima kasih telah berbelanja!',
+      details,
+    );
   }
 
   @override
@@ -199,6 +251,8 @@ class _CheckoutPageState extends State<CheckoutPage>
 
     await clearUserOrders();
 
+    await _showPaymentSuccessNotification(orderId);
+
     if (!context.mounted) return; // mencegah error jika context tidak tersedia
 
     Navigator.pushReplacement(
@@ -309,34 +363,32 @@ class _CheckoutPageState extends State<CheckoutPage>
       );
 
       String firstName = 'Pengguna';
-      String email = user?.email ?? 'email@example.com';
+      String email = user.email ?? 'email@example.com';
 
-      if (user != null) {
-        try {
-          final userDoc =
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid)
-                  .get();
+      try {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
 
-          if (userDoc.exists) {
-            final userData = userDoc.data() as Map<String, dynamic>;
-            firstName =
-                userData['name'] ??
-                userData['full_name'] ??
-                user.displayName ??
-                'Pengguna';
-            // Use the email from Firestore if available, otherwise use the one from auth
-            email = userData['email'] ?? user.email ?? 'email@example.com';
-          } else if (user.displayName != null) {
-            // If no user document but user has a display name
-            firstName = user.displayName!;
-          }
-        } catch (e) {
-          print('Error retrieving user data: $e');
-          // Fallback to auth user data
-          firstName = user.displayName ?? 'Pengguna';
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          firstName =
+              userData['name'] ??
+              userData['full_name'] ??
+              user.displayName ??
+              'Pengguna';
+          // Use the email from Firestore if available, otherwise use the one from auth
+          email = userData['email'] ?? user.email ?? 'email@example.com';
+        } else if (user.displayName != null) {
+          // If no user document but user has a display name
+          firstName = user.displayName!;
         }
+      } catch (e) {
+        print('Error retrieving user data: $e');
+        // Fallback to auth user data
+        firstName = user.displayName ?? 'Pengguna';
       }
 
       final body = {

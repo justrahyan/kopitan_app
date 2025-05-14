@@ -4,7 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
-import 'dart:math';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 class OrderStatusPage extends StatefulWidget {
   final String? orderId;
@@ -45,17 +49,64 @@ class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
     });
   }
 
-  void _handleDragEnd(DragEndDetails details) {
-    if (_dragExtent > _maxDrag * 0.8) {
+  void _handleDragEnd(DragEndDetails details) async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (_dragExtent > screenWidth * 0.6) {
       setState(() {
         _revealed = true;
-        widget.onCodeUsed();
       });
+      widget.onCodeUsed();
+
+      // Show notification when code is revealed
+      await _showPickupCodeNotification();
+
+      final prefs = await SharedPreferences.getInstance();
+      final revealedKey = 'revealed_pickup_${widget.orderId}';
+      prefs.setBool(revealedKey, true);
     } else {
       setState(() {
         _dragExtent = 0;
       });
     }
+  }
+
+  Future<void> _showPickupCodeNotification() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'pickup_code_channel',
+          'Pickup Code Notifications',
+          channelDescription: 'Notifications for pickup code reveal',
+          importance: Importance.high,
+          priority: Priority.high,
+          color: Color(0xFF9A534F), // xprimaryColor
+          icon: '@mipmap/ic_launcher',
+        );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      3, // Unique ID for this notification type
+      'Kode Pickup Siap Digunakan',
+      'Kode pickup Anda telah siap digunakan. Tunjukkan kepada barista untuk mengambil pesanan.',
+      details,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRevealedStatus();
+  }
+
+  void _loadRevealedStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final revealedKey = 'revealed_pickup_${widget.orderId}';
+    final revealed = prefs.getBool(revealedKey) ?? false;
+    setState(() {
+      _revealed = revealed;
+    });
   }
 
   @override
@@ -77,7 +128,10 @@ class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
             ),
           ),
           onPressed: _showBottomSheet,
-          child: const Text('Kode Siap Digunakan'),
+          child: Text(
+            'Kode Siap Digunakan',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
@@ -192,6 +246,11 @@ class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: xprimaryColor,
+                        foregroundColor: Colors.white,
+                      ),
                       child: const Text('Selesai'),
                     ),
                   ],
@@ -211,6 +270,408 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   );
   bool codeUsed = false;
   bool codeSwiped = false;
+  String _previousStatus = '';
+
+  Future<void> _initNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (
+        NotificationResponse notificationResponse,
+      ) {
+        // Handle notification tap
+        final String? payload = notificationResponse.payload;
+        if (payload != null) {
+          debugPrint('Notification payload: $payload');
+        }
+      },
+    );
+  }
+
+  Future<void> _showStatusNotification(String status, String orderId) async {
+    if (_previousStatus == status) {
+      // Don't show duplicate notifications for the same status
+      return;
+    }
+
+    // Update the previous status
+    setState(() {
+      _previousStatus = status;
+    });
+
+    // Define the notification details
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'order_status_channel',
+          'Order Status Notifications',
+          channelDescription: 'Notifications for order status updates',
+          importance: Importance.high,
+          priority: Priority.high,
+          color: Color(0xFF9A534F), // xprimaryColor
+          icon: '@mipmap/ic_launcher',
+        );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    // Create notification content based on status
+    String title, body;
+    int notificationId;
+
+    switch (status) {
+      case 'processing':
+        title = 'Pesanan Diterima';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda sedang diproses. Mohon tunggu sebentar.';
+        notificationId = 0;
+        break;
+      case 'ready':
+        title = 'Pesanan Siap Diambil';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda siap untuk diambil. Silakan ambil di outlet kami.';
+        notificationId = 1;
+        break;
+      case 'completed':
+        title = 'Pesanan Selesai';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda telah selesai. Terima kasih telah berbelanja di Kopitan!';
+        notificationId = 2;
+        break;
+      default:
+        return; // Don't show notification for unknown status
+    }
+
+    // Show the notification
+    await flutterLocalNotificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      details,
+      payload: 'order_id:$orderId',
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initNotifications();
+    // Store the initial order ID to check for status changes on the same order
+    _loadPreviousStatus();
+  }
+
+  void _loadPreviousStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final orderId = widget.orderId ?? '';
+    setState(() {
+      _previousStatus = prefs.getString('previous_status_$orderId') ?? '';
+    });
+  }
+
+  void _savePreviousStatus(String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    final orderId = widget.orderId ?? '';
+    prefs.setString('previous_status_$orderId', status);
+  }
+
+  Widget _buildProgressStep({
+    required String icon,
+    required String label,
+    bool active = false,
+    bool isCompleted = false,
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    Color circleColor;
+    Color iconColor;
+    Color textColor;
+
+    if (isCompleted) {
+      circleColor = xprimaryColor;
+      iconColor = Colors.white;
+      textColor = Colors.black;
+    } else if (active) {
+      circleColor = xprimaryColor;
+      iconColor = Colors.white;
+      textColor = Colors.black;
+    } else {
+      circleColor = Colors.white;
+      iconColor = Colors.grey;
+      textColor = Colors.grey;
+    }
+
+    return Column(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: circleColor,
+            border: Border.all(
+              color: active || isCompleted ? xprimaryColor : Colors.grey,
+              width: 2,
+            ),
+          ),
+          child: Icon(_getIconData(icon), color: iconColor, size: 24),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: textColor,
+            fontWeight:
+                active || isCompleted ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressLine({bool isActive = false, double topPadding = 0.0}) {
+    return Expanded(
+      child: Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.only(top: topPadding),
+        child: Container(
+          height: 2,
+          color: isActive ? xprimaryColor : Colors.grey[300],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderIdentifier(String status, String orderId) {
+    switch (status) {
+      case 'processing':
+        return Column(
+          children: [
+            const Text(
+              'Nomor Order',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            Text(
+              _formatOrderId(orderId),
+              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
+          ],
+        );
+      case 'ready':
+        return Column(
+          children: [
+            Image.asset(
+              'assets/images/status/siap-pickup.png',
+              width: 300,
+              fit: BoxFit.cover,
+            ),
+          ],
+        );
+      case 'completed':
+        return Image.asset(
+          'assets/images/status/selesai.png',
+          width: 210,
+          fit: BoxFit.cover,
+        );
+      default:
+        return Column(
+          children: [
+            const Text(
+              'Nomor Order',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            Text(
+              _formatOrderId(orderId),
+              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
+          ],
+        );
+    }
+  }
+
+  Widget _buildSectionHeader(String title, String trailingText) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            trailingText,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 24, color: Colors.orangeAccent),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderItemTile({
+    required String name,
+    required String desc,
+    required String price,
+    required int quantity,
+    required String imagePath,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child:
+                imagePath.isNotEmpty
+                    ? Image.asset(
+                      imagePath,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultImage();
+                      },
+                    )
+                    : _buildDefaultImage(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  price,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[200],
+            ),
+            child: Text(
+              'x$quantity',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentInfoRow({required String label, required String value}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodRow({
+    required String paymentMethod,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _getPaymentMethodLogo(paymentMethod),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                paymentMethod.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +713,11 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
           final List<dynamic> items = orderData['items'] ?? [];
           final Timestamp timestamp = orderData['timestamp'] ?? Timestamp.now();
           final String status = orderData['status'] ?? 'processing';
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showStatusNotification(status, orderId);
+            _savePreviousStatus(status);
+          });
 
           return FutureBuilder<DocumentSnapshot>(
             future:
@@ -337,36 +803,40 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16.0,
                               ),
-                              child: Card(
-                                color: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Colors.grey.shade300, // warna border
-                                    width: 1, // ketebalan border
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Card(
+                                  color: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color:
+                                          Colors.grey.shade300, // warna border
+                                      width: 1, // ketebalan border
+                                    ),
                                   ),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        _getStatusMessage(status),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          _getStatusMessage(status),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        _getStatusDescription(status),
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.grey,
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _getStatusDescription(status),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -513,55 +983,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     );
   }
 
-  Widget _buildOrderIdentifier(String status, String orderId) {
-    switch (status) {
-      case 'processing':
-        return Column(
-          children: [
-            const Text(
-              'Nomor Order',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-            Text(
-              _formatOrderId(orderId),
-              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
-          ],
-        );
-      case 'ready':
-        return Column(
-          children: [
-            Image.asset(
-              'assets/images/status/siap-pickup.png',
-              width: 300,
-              fit: BoxFit.cover,
-            ),
-          ],
-        );
-      case 'completed':
-        return Image.asset(
-          'assets/images/status/selesai.png',
-          width: 210,
-          fit: BoxFit.cover,
-        );
-      default:
-        return Column(
-          children: [
-            const Text(
-              'Nomor Order',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-            Text(
-              _formatOrderId(orderId),
-              style: const TextStyle(fontSize: 46, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
-          ],
-        );
-    }
-  }
-
   String _formatOrderId(String orderId) {
     if (orderId.length > 3) {
       return orderId.substring(orderId.length - 3);
@@ -616,75 +1037,6 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     return query.snapshots();
   }
 
-  Widget _buildProgressStep({
-    required String icon,
-    required String label,
-    bool active = false,
-    bool isCompleted = false,
-    bool isFirst = false,
-    bool isLast = false,
-  }) {
-    Color circleColor;
-    Color iconColor;
-    Color textColor;
-
-    if (isCompleted) {
-      circleColor = xprimaryColor;
-      iconColor = Colors.white;
-      textColor = Colors.black;
-    } else if (active) {
-      circleColor = xprimaryColor;
-      iconColor = Colors.white;
-      textColor = Colors.black;
-    } else {
-      circleColor = Colors.white;
-      iconColor = Colors.grey;
-      textColor = Colors.grey;
-    }
-
-    return Column(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: circleColor,
-            border: Border.all(
-              color: active || isCompleted ? xprimaryColor : Colors.grey,
-              width: 2,
-            ),
-          ),
-          child: Icon(_getIconData(icon), color: iconColor, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            color: textColor,
-            fontWeight:
-                active || isCompleted ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressLine({bool isActive = false, double topPadding = 0.0}) {
-    return Expanded(
-      child: Container(
-        alignment: Alignment.center,
-        padding: EdgeInsets.only(top: topPadding),
-        child: Container(
-          height: 2,
-          color: isActive ? xprimaryColor : Colors.grey[300],
-        ),
-      ),
-    );
-  }
-
   IconData _getIconData(String icon) {
     switch (icon) {
       case 'refresh':
@@ -698,188 +1050,12 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     }
   }
 
-  Widget _buildSectionHeader(String title, String trailingText) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            trailingText,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: Colors.orangeAccent),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderItemTile({
-    required String name,
-    required String desc,
-    required String price,
-    required int quantity,
-    required String imagePath,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child:
-                imagePath.isNotEmpty
-                    ? Image.asset(
-                      imagePath,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultImage();
-                      },
-                    )
-                    : _buildDefaultImage(),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  desc,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  price,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[200],
-            ),
-            child: Text(
-              'x$quantity',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDefaultImage() {
     return Container(
       width: 60,
       height: 60,
       color: Colors.brown[200],
       child: const Center(child: Icon(Icons.coffee, color: Colors.brown)),
-    );
-  }
-
-  Widget _buildPaymentInfoRow({required String label, required String value}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodRow({
-    required String paymentMethod,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _getPaymentMethodLogo(paymentMethod),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                paymentMethod.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
     );
   }
 
