@@ -212,7 +212,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                   itemBuilder: (context, index) {
                     final menu = menuList[index];
                     return Container(
-                      width: 160,
+                      width: 180,
                       margin: const EdgeInsets.only(right: 12),
                       child: GestureDetector(
                         onTap: () async {
