@@ -332,16 +332,13 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
                         Row(
                           children: [
                             ...items.take(3).map((item) {
+                              final imagePath =
+                                  item['imagePath'] as String? ?? '';
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(100),
-                                  child: Image.asset(
-                                    item['imagePath'] ?? '',
-                                    width: 45,
-                                    height: 45,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: _buildSafeImage(imagePath),
                                 ),
                               );
                             }).toList(),
@@ -405,6 +402,37 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         );
       },
     );
+  }
+
+  Widget _buildSafeImage(String imagePath) {
+    try {
+      return Image.asset(
+        imagePath,
+        width: 45,
+        height: 45,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 45,
+            height: 45,
+            color: Colors.grey.shade300,
+            child: const Icon(
+              Icons.image_not_supported,
+              size: 20,
+              color: Colors.grey,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error loading image: $e');
+      return Container(
+        width: 45,
+        height: 45,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.error, size: 20, color: Colors.grey),
+      );
+    }
   }
 
   Widget _buildActionButton(String status, String docId) {
