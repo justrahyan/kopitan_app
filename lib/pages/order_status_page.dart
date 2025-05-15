@@ -46,6 +46,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   bool codeUsed = false;
   bool codeSwiped = false;
   String _previousStatus = '';
+  final Map<String, String> _previousStatusMap = {};
 
   Future<void> _initNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -136,22 +137,25 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   void initState() {
     super.initState();
     _initNotifications();
-    // Store the initial order ID to check for status changes on the same order
-    _loadPreviousStatus();
+    _loadAllPreviousStatuses();
   }
 
-  void _loadPreviousStatus() async {
+  Future<void> _loadAllPreviousStatuses() async {
     final prefs = await SharedPreferences.getInstance();
-    final orderId = widget.orderId ?? '';
-    setState(() {
-      _previousStatus = prefs.getString('previous_status_$orderId') ?? '';
-    });
+    final keys = prefs.getKeys();
+
+    for (var key in keys) {
+      if (key.startsWith('previous_status_')) {
+        final orderId = key.replaceFirst('previous_status_', '');
+        final status = prefs.getString(key) ?? '';
+        _previousStatusMap[orderId] = status;
+      }
+    }
   }
 
-  void _savePreviousStatus(String status) async {
+  Future<void> _savePreviousStatus(String orderId, String status) async {
     final prefs = await SharedPreferences.getInstance();
-    final orderId = widget.orderId ?? '';
-    prefs.setString('previous_status_$orderId', status);
+    await prefs.setString('previous_status_$orderId', status);
   }
 
   Widget _buildProgressStep({
@@ -501,7 +505,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showStatusNotification(status, orderId);
-            _savePreviousStatus(status);
+            _savePreviousStatus(orderId, status);
           });
 
           return FutureBuilder<DocumentSnapshot>(
@@ -911,7 +915,9 @@ class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
           channelDescription: 'Notifications for pickup code reveal',
           importance: Importance.high,
           priority: Priority.high,
-          color: Color(0xFF9A534F), // xprimaryColor
+          showWhen: true,
+          enableVibration: true,
+          playSound: true,
           icon: '@drawable/icon_app',
         );
 

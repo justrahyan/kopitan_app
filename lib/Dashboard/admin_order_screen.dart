@@ -6,6 +6,7 @@ import 'package:kopitan_app/colors.dart';
 import 'dart:math';
 // Import package untuk notifikasi
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminOrderListPage extends StatefulWidget {
   const AdminOrderListPage({super.key});
@@ -17,6 +18,7 @@ class AdminOrderListPage extends StatefulWidget {
 class _AdminOrderListPageState extends State<AdminOrderListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Map<String, String> _previousStatusMap = {};
 
   // Inisialisasi FlutterLocalNotificationsPlugin
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -35,6 +37,25 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
 
     // Mulai listen ke pesanan baru
     _listenForNewOrders();
+    _loadAllPreviousStatuses();
+  }
+
+  Future<void> _loadAllPreviousStatuses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+
+    for (var key in keys) {
+      if (key.startsWith('previous_status_')) {
+        final orderId = key.replaceFirst('previous_status_', '');
+        final status = prefs.getString(key) ?? '';
+        _previousStatusMap[orderId] = status;
+      }
+    }
+  }
+
+  Future<void> _savePreviousStatus(String orderId, String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('previous_status_$orderId', status);
   }
 
   // Inisialisasi pengaturan notifikasi

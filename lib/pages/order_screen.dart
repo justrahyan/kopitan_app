@@ -112,14 +112,20 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initNotifications();
+    _loadAllPreviousStatuses();
   }
 
-  Future<void> _loadPreviousStatus(String orderId) async {
+  Future<void> _loadAllPreviousStatuses() async {
     final prefs = await SharedPreferences.getInstance();
-    final status = prefs.getString('previous_status_$orderId') ?? '';
-    setState(() {
-      _previousStatusMap[orderId] = status;
-    });
+    final keys = prefs.getKeys();
+
+    for (var key in keys) {
+      if (key.startsWith('previous_status_')) {
+        final orderId = key.replaceFirst('previous_status_', '');
+        final status = prefs.getString(key) ?? '';
+        _previousStatusMap[orderId] = status;
+      }
+    }
   }
 
   Future<void> _savePreviousStatus(String orderId, String status) async {
@@ -314,10 +320,8 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       default:
         statusText = 'Menunggu Konfirmasi';
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _loadPreviousStatus(orderId);
-      await _showStatusNotification(status, orderId);
-    });
+
+    _showStatusNotification(status, orderId);
 
     return GestureDetector(
       onTap: () {
@@ -421,16 +425,26 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
             borderRadius: BorderRadius.circular(100),
             child:
                 imagePath.isNotEmpty
-                    ? Image.asset(
-                      imagePath,
-                      width: 55,
-                      height: 55,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultImage(45);
-                      },
-                    )
-                    : _buildDefaultImage(45),
+                    ? (imagePath.toString().startsWith('https')
+                        ? Image.network(
+                          imagePath,
+                          width: 55,
+                          height: 55,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultImage(55);
+                          },
+                        )
+                        : Image.asset(
+                          imagePath,
+                          width: 55,
+                          height: 55,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultImage(55);
+                          },
+                        ))
+                    : _buildDefaultImage(55),
           ),
         ),
       );

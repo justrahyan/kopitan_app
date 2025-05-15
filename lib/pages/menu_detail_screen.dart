@@ -129,8 +129,8 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
-                                    const Text(
-                                      'Gula Aren',
+                                    Text(
+                                      widget.name,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey,

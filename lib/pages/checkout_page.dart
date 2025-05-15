@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kopitan_app/pages/payment_success_page.dart';
 import 'package:kopitan_app/services/notification_preference.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -27,6 +28,7 @@ class _CheckoutPageState extends State<CheckoutPage>
   bool _isPaymentInProgress = false;
   String? _currentOrderId;
   bool _isEditMode = false;
+  final Map<String, String> _previousStatusMap = {};
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -36,6 +38,25 @@ class _CheckoutPageState extends State<CheckoutPage>
     // Register observer to detect when app comes back to foreground
     WidgetsBinding.instance.addObserver(this);
     _initNotifications();
+    _loadAllPreviousStatuses();
+  }
+
+  Future<void> _loadAllPreviousStatuses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+
+    for (var key in keys) {
+      if (key.startsWith('previous_status_')) {
+        final orderId = key.replaceFirst('previous_status_', '');
+        final status = prefs.getString(key) ?? '';
+        _previousStatusMap[orderId] = status;
+      }
+    }
+  }
+
+  Future<void> _savePreviousStatus(String orderId, String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('previous_status_$orderId', status);
   }
 
   Future<void> _initNotifications() async {
