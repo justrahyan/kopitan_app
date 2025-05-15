@@ -24,8 +24,11 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // Simpan ID dokumen pesanan terakhir untuk tracking pesanan baru
-  List<String> _lastOrderIds = [];
+  // Simpan ID dokumen pesanan yang sudah dinotifikasi
+  Set<String> _notifiedOrderIds = {};
+
+  // Flag untuk menandai apakah kita baru mulai mendengarkan pesanan
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -36,7 +39,10 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
     _initNotifications();
 
     // Mulai listen ke pesanan baru
-    _listenForNewOrders();
+    _loadNotifiedOrderIds().then((_) {
+      // Mulai listen ke pesanan baru setelah loaded notified orders
+      _listenForNewOrders();
+    });
     _loadAllPreviousStatuses();
   }
 
@@ -51,6 +57,17 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         _previousStatusMap[orderId] = status;
       }
     }
+  }
+
+  Future<void> _loadNotifiedOrderIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final notifiedOrders = prefs.getStringList('notified_order_ids') ?? [];
+    _notifiedOrderIds = Set<String>.from(notifiedOrders);
+  }
+
+  Future<void> _saveNotifiedOrderIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('notified_order_ids', _notifiedOrderIds.toList());
   }
 
   Future<void> _savePreviousStatus(String orderId, String status) async {
@@ -87,7 +104,14 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
   Future<void> _showNewOrderNotification(
     String orderId,
     String customerName,
+    String documentId,
   ) async {
+    // Periksa apakah pesanan ini sudah pernah dinotifikasi
+    if (_notifiedOrderIds.contains(documentId)) {
+      // Pesanan sudah pernah dinotifikasi, jangan tampilkan notifikasi lagi
+      return;
+    }
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
           'new_order_channel',
@@ -113,12 +137,21 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
       iOS: iOSPlatformChannelSpecifics,
     );
 
+    // Generate ID unik untuk notifikasi (bisa menggunakan hash dari document ID)
+    final notificationId = documentId.hashCode;
+
     await flutterLocalNotificationsPlugin.show(
-      0,
+      notificationId,
       'Pesanan Baru Masuk!',
       'Pesanan #$orderId dari $customerName menunggu konfirmasi',
       platformChannelSpecifics,
     );
+
+    // Tandai pesanan ini sudah dinotifikasi
+    _notifiedOrderIds.add(documentId);
+
+    // Simpan ke SharedPreferences
+    _saveNotifiedOrderIds();
   }
 
   // Listen untuk pesanan baru yang masuk
@@ -128,10 +161,18 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         .collection('order_history')
         .where('status', isEqualTo: 'pending')
         .orderBy('timestamp', descending: true)
-        .limit(10)
         .get()
         .then((snapshot) {
-          _lastOrderIds = snapshot.docs.map((doc) => doc.id).toList();
+          // Tandai semua pesanan yang ada sebagai sudah diketahui
+          for (var doc in snapshot.docs) {
+            _notifiedOrderIds.add(doc.id);
+          }
+
+          // Simpan ke SharedPreferences
+          _saveNotifiedOrderIds();
+
+          // Set _isFirstLoad menjadi false setelah mendapatkan daftar awal
+          _isFirstLoad = false;
         });
 
     // Stream listener untuk pesanan baru dengan status pending
@@ -141,24 +182,29 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
         .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
+          // Jika masih dalam proses loading awal, jangan kirim notifikasi
+          if (_isFirstLoad) {
+            return;
+          }
+
           // Periksa apakah ada dokumen baru
-          for (var doc in snapshot.docs) {
-            if (!_lastOrderIds.contains(doc.id)) {
-              // Ini adalah pesanan baru
-              final data = doc.data();
-              final orderId = data['orderId']?.toString() ?? 'ORDER-XXX';
-              final userName = data['userName'] ?? 'Pelanggan';
+          for (var doc in snapshot.docChanges) {
+            // Hanya perhatikan dokumen yang baru ditambahkan
+            if (doc.type == DocumentChangeType.added) {
+              final data = doc.doc.data();
+              if (data != null) {
+                final orderId = data['orderId']?.toString() ?? 'ORDER-XXX';
+                final userName = data['userName'] ?? 'Pelanggan';
 
-              // Tampilkan notifikasi
-              _showNewOrderNotification(
-                orderId.length >= 3
-                    ? orderId.substring(orderId.length - 3)
-                    : orderId,
-                userName,
-              );
-
-              // Tambahkan ID ini ke daftar yang sudah diketahui
-              _lastOrderIds.add(doc.id);
+                // Tampilkan notifikasi
+                _showNewOrderNotification(
+                  orderId.length >= 3
+                      ? orderId.substring(orderId.length - 3)
+                      : orderId,
+                  userName,
+                  doc.doc.id, // Gunakan ID dokumen untuk tracking
+                );
+              }
             }
           }
         });
