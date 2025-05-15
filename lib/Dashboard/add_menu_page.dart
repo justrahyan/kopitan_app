@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kopitan_app/colors.dart';
 
 class AddMenuPage extends StatefulWidget {
   final String category;
@@ -92,7 +94,19 @@ class _AddMenuPageState extends State<AddMenuPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Menu Baru')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Tambah Menu Baru'),
+        titleTextStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+          color: Colors.black,
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -101,17 +115,38 @@ class _AddMenuPageState extends State<AddMenuPage> {
             children: [
               GestureDetector(
                 onTap: _pickImage,
-                child:
-                    _selectedImage != null
-                        ? Image.file(_selectedImage!, height: 180)
-                        : Container(
-                          height: 180,
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.add_photo_alternate,
-                            size: 60,
-                          ),
-                        ),
+                child: Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey.shade300, // warna border
+                      width: 1, // ketebalan border
+                    ),
+                    borderRadius: BorderRadius.circular(12), // radius sudut
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      12,
+                    ), // agar gambar juga ikut rounded
+                    child:
+                        _selectedImage != null
+                            ? Image.file(
+                              _selectedImage!,
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            )
+                            : Container(
+                              color: Colors.transparent,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.add_photo_alternate,
+                                size: 60,
+                                color: Colors.grey,
+                              ),
+                            ),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -134,6 +169,10 @@ class _AddMenuPageState extends State<AddMenuPage> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveMenu,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: xprimaryColor,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Simpan Menu'),
               ),
             ],

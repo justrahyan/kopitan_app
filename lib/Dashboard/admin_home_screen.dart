@@ -158,6 +158,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _iconButton(
                         iconWidget: Image.asset(
