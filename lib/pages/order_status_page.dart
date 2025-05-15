@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:kopitan_app/services/notification_preference.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -34,232 +35,6 @@ class SwipeToUseCodeWidget extends StatefulWidget {
 
   @override
   State<SwipeToUseCodeWidget> createState() => _SwipeToUseCodeWidgetState();
-}
-
-class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
-  double _dragExtent = 0.0;
-  final double _maxDrag = 260.0;
-  bool _revealed = false;
-
-  void _handleDragUpdate(DragUpdateDetails details) {
-    setState(() {
-      _dragExtent += details.primaryDelta!;
-      if (_dragExtent < 0) _dragExtent = 0;
-      if (_dragExtent > _maxDrag) _dragExtent = _maxDrag;
-    });
-  }
-
-  void _handleDragEnd(DragEndDetails details) async {
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (_dragExtent > screenWidth * 0.6) {
-      setState(() {
-        _revealed = true;
-      });
-      widget.onCodeUsed();
-
-      // Show notification when code is revealed
-      await _showPickupCodeNotification();
-
-      final prefs = await SharedPreferences.getInstance();
-      final revealedKey = 'revealed_pickup_${widget.orderId}';
-      prefs.setBool(revealedKey, true);
-    } else {
-      setState(() {
-        _dragExtent = 0;
-      });
-    }
-  }
-
-  Future<void> _showPickupCodeNotification() async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'pickup_code_channel',
-          'Pickup Code Notifications',
-          channelDescription: 'Notifications for pickup code reveal',
-          importance: Importance.high,
-          priority: Priority.high,
-          color: Color(0xFF9A534F), // xprimaryColor
-          icon: '@mipmap/ic_launcher',
-        );
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      3, // Unique ID for this notification type
-      'Kode Pickup Siap Digunakan',
-      'Kode pickup Anda telah siap digunakan. Tunjukkan kepada barista untuk mengambil pesanan.',
-      details,
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRevealedStatus();
-  }
-
-  void _loadRevealedStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final revealedKey = 'revealed_pickup_${widget.orderId}';
-    final revealed = prefs.getBool(revealedKey) ?? false;
-    setState(() {
-      _revealed = revealed;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = xprimaryColor.withOpacity(0.7);
-    final foregroundColor = xprimaryColor;
-    final fullWidth =
-        MediaQuery.of(context).size.width - 32; // padding 16 left + right
-
-    if (_revealed || widget.swiped) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: xprimaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: _showBottomSheet,
-          child: Text(
-            'Kode Siap Digunakan',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Stack(
-        children: [
-          // Background text
-          Container(
-            height: 56,
-            width: fullWidth,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'Swipe untuk tampilkan kode',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          // Swipe foreground with animated icon
-          GestureDetector(
-            onHorizontalDragUpdate: _handleDragUpdate,
-            onHorizontalDragEnd: _handleDragEnd,
-            child: Stack(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 100),
-                  height: 56,
-                  width: _dragExtent.clamp(56, fullWidth),
-                  decoration: BoxDecoration(
-                    color: foregroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-
-                // Moving Icon
-                Positioned(
-                  left: (_dragExtent.clamp(
-                    16,
-                    fullWidth - 40,
-                  )), // move icon along drag
-                  top: 14,
-                  child: const Icon(
-                    Icons.arrow_right_alt,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showBottomSheet() {
-    showModalBottomSheet(
-      context: widget.parentContext,
-      builder:
-          (_) => FutureBuilder<QuerySnapshot>(
-            future:
-                FirebaseFirestore.instance
-                    .collection('order_history')
-                    .where('orderId', isEqualTo: widget.orderId)
-                    .limit(1)
-                    .get(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Data pesanan tidak ditemukan.',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                );
-              }
-
-              final doc = snapshot.data!.docs.first;
-              final code = doc['pickupCode'] ?? '0000';
-
-              return Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Kode Pickup', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 16),
-                    Text(
-                      code,
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Tunjukkan kode ini ke barista saat pengambilan di kasir.',
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        backgroundColor: xprimaryColor,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Selesai'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-    );
-  }
 }
 
 class _OrderStatusPageState extends State<OrderStatusPage> {
@@ -294,10 +69,8 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   }
 
   Future<void> _showStatusNotification(String status, String orderId) async {
-    if (_previousStatus == status) {
-      // Don't show duplicate notifications for the same status
-      return;
-    }
+    if (!NotificationPreference.getNotificationStatus()) return;
+    if (_previousStatus == status) return;
 
     // Update the previous status
     setState(() {
@@ -564,15 +337,25 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
             borderRadius: BorderRadius.circular(8),
             child:
                 imagePath.isNotEmpty
-                    ? Image.asset(
-                      imagePath,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultImage();
-                      },
-                    )
+                    ? (imagePath.toString().startsWith('https')
+                        ? Image.network(
+                          imagePath,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultImage();
+                          },
+                        )
+                        : Image.asset(
+                          imagePath,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultImage();
+                          },
+                        ))
                     : _buildDefaultImage(),
           ),
           const SizedBox(width: 12),
@@ -1080,5 +863,232 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     }
 
     return iconData;
+  }
+}
+
+class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
+  double _dragExtent = 0.0;
+  final double _maxDrag = 260.0;
+  bool _revealed = false;
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _dragExtent += details.primaryDelta!;
+      if (_dragExtent < 0) _dragExtent = 0;
+      if (_dragExtent > _maxDrag) _dragExtent = _maxDrag;
+    });
+  }
+
+  void _handleDragEnd(DragEndDetails details) async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (_dragExtent > screenWidth * 0.6) {
+      setState(() {
+        _revealed = true;
+      });
+      widget.onCodeUsed();
+
+      // Show notification when code is revealed
+      await _showPickupCodeNotification();
+
+      final prefs = await SharedPreferences.getInstance();
+      final revealedKey = 'revealed_pickup_${widget.orderId}';
+      prefs.setBool(revealedKey, true);
+    } else {
+      setState(() {
+        _dragExtent = 0;
+      });
+    }
+  }
+
+  Future<void> _showPickupCodeNotification() async {
+    if (!NotificationPreference.getNotificationStatus()) return;
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'pickup_code_channel',
+          'Pickup Code Notifications',
+          channelDescription: 'Notifications for pickup code reveal',
+          importance: Importance.high,
+          priority: Priority.high,
+          color: Color(0xFF9A534F), // xprimaryColor
+          icon: '@mipmap/ic_launcher',
+        );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      3, // Unique ID for this notification type
+      'Kode Pickup Siap Digunakan',
+      'Kode pickup Anda telah siap digunakan. Tunjukkan kepada barista untuk mengambil pesanan.',
+      details,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRevealedStatus();
+  }
+
+  void _loadRevealedStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final revealedKey = 'revealed_pickup_${widget.orderId}';
+    final revealed = prefs.getBool(revealedKey) ?? false;
+    setState(() {
+      _revealed = revealed;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = xprimaryColor.withOpacity(0.7);
+    final foregroundColor = xprimaryColor;
+    final fullWidth =
+        MediaQuery.of(context).size.width - 32; // padding 16 left + right
+
+    if (_revealed || widget.swiped) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: xprimaryColor,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _showBottomSheet,
+          child: Text(
+            'Kode Siap Digunakan',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Stack(
+        children: [
+          // Background text
+          Container(
+            height: 56,
+            width: fullWidth,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'Swipe untuk tampilkan kode',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          // Swipe foreground with animated icon
+          GestureDetector(
+            onHorizontalDragUpdate: _handleDragUpdate,
+            onHorizontalDragEnd: _handleDragEnd,
+            child: Stack(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 100),
+                  height: 56,
+                  width: _dragExtent.clamp(56, fullWidth),
+                  decoration: BoxDecoration(
+                    color: foregroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+
+                // Moving Icon
+                Positioned(
+                  left: (_dragExtent.clamp(
+                    16,
+                    fullWidth - 40,
+                  )), // move icon along drag
+                  top: 14,
+                  child: const Icon(
+                    Icons.arrow_right_alt,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBottomSheet() {
+    showModalBottomSheet(
+      context: widget.parentContext,
+      builder:
+          (_) => FutureBuilder<QuerySnapshot>(
+            future:
+                FirebaseFirestore.instance
+                    .collection('order_history')
+                    .where('orderId', isEqualTo: widget.orderId)
+                    .limit(1)
+                    .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Data pesanan tidak ditemukan.',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                );
+              }
+
+              final doc = snapshot.data!.docs.first;
+              final code = doc['pickupCode'] ?? '0000';
+
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Kode Pickup', style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 16),
+                    Text(
+                      code,
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Tunjukkan kode ini ke barista saat pengambilan di kasir.',
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        backgroundColor: xprimaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Selesai'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+    );
   }
 }

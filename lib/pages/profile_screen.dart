@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/pages/login_screen.dart';
+import 'package:kopitan_app/pages/order_status_page.dart';
+import 'package:kopitan_app/services/notification_preference.dart';
 
 class KopitanProfileScreen extends StatefulWidget {
   const KopitanProfileScreen({super.key});
@@ -23,6 +26,28 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+  }
+
+  Future<void> _updateNotificationPreference(bool isOn) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final docRef = FirebaseFirestore.instance.collection('users').doc(uid);
+
+    try {
+      final doc = await docRef.get();
+
+      if (doc.exists) {
+        await docRef.update({'isNotificationOn': isOn});
+      } else {
+        await docRef.set({'isNotificationOn': isOn}, SetOptions(merge: true));
+      }
+
+      // Simpan ke memory lokal
+      NotificationPreference.setNotification(isOn);
+    } catch (e) {
+      debugPrint('Gagal memperbarui preferensi notifikasi: $e');
+    }
   }
 
   void _showEditAlamatSheet() {
@@ -125,6 +150,12 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
           fullName = data?['full_name'] ?? '';
           email = data?['email'] ?? '';
           address = data?['address'] ?? '';
+          if (data != null && data.containsKey('isNotificationOn')) {
+            NotificationPreference.setNotification(data['isNotificationOn']);
+          } else {
+            NotificationPreference.setNotification(true); // Default aktif
+          }
+          isNotificationOn = NotificationPreference.getNotificationStatus();
         });
         _addressController.text = address;
       }
@@ -464,9 +495,31 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     );
   }
 
-  void _showNotificationSheet() {
-    bool isNotificationOn = true;
+  Future<void> _showToggleNotification(bool isOn) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'toggle_channel',
+          'Toggle Notification',
+          channelDescription: 'Menampilkan status toggle notifikasi',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        );
 
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      5,
+      'Status Notifikasi',
+      isOn ? 'Notifikasi diaktifkan' : 'Notifikasi dinonaktifkan',
+      details,
+    );
+  }
+
+  bool isNotificationOn = true;
+  void _showNotificationSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -475,7 +528,7 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
       ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setStateSheet) {
             return Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -498,9 +551,11 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
                         value: isNotificationOn,
                         activeColor: xprimaryColor,
                         onChanged: (value) {
-                          setState(() {
+                          setStateSheet(() {
                             isNotificationOn = value;
                           });
+                          debugPrint('Notifikasi diaktifkan: $value');
+                          _updateNotificationPreference(value);
                         },
                       ),
                     ],

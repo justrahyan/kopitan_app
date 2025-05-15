@@ -8,6 +8,7 @@ import 'package:kopitan_app/pages/app_main_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:kopitan_app/pages/payment_success_page.dart';
+import 'package:kopitan_app/services/notification_preference.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -62,27 +63,34 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   Future<void> _showPaymentSuccessNotification(String orderId) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'payment_channel',
-          'Payment Notifications',
-          channelDescription: 'Notifications for payment status',
-          importance: Importance.high,
-          priority: Priority.high,
-          color: Color(0xFF9A534F), // Sesuaikan dengan warna utama jika ada
-          icon: '@mipmap/ic_launcher',
-        );
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final isNotificationOn = doc['isNotificationOn'] ?? true;
+      NotificationPreference.setNotification(isNotificationOn);
 
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
+      if (!NotificationPreference.getNotificationStatus()) return;
 
-    await flutterLocalNotificationsPlugin.show(
-      2, // ID berbeda dengan notifikasi pickup
-      'Pembayaran Berhasil',
-      'Pesanan #$orderId berhasil dikonfirmasi. Terima kasih telah berbelanja!',
-      details,
-    );
+      const androidDetails = AndroidNotificationDetails(
+        'payment_channel',
+        'Payment Notifications',
+        channelDescription: 'Notifications for payment status',
+        importance: Importance.high,
+        priority: Priority.high,
+        color: Color(0xFF9A534F),
+        icon: '@mipmap/ic_launcher',
+      );
+
+      const details = NotificationDetails(android: androidDetails);
+
+      await flutterLocalNotificationsPlugin.show(
+        2,
+        'Pembayaran Berhasil',
+        'Pesanan #$orderId berhasil dikonfirmasi. Terima kasih telah berbelanja!',
+        details,
+      );
+    }
   }
 
   @override
@@ -330,6 +338,15 @@ class _CheckoutPageState extends State<CheckoutPage>
         const SnackBar(content: Text('Gagal memeriksa status pembayaran')),
       );
     }
+  }
+
+  Widget _buildDefaultImage() {
+    return Container(
+      width: 60,
+      height: 60,
+      color: Colors.brown[200],
+      child: const Center(child: Icon(Icons.coffee, color: Colors.brown)),
+    );
   }
 
   @override
@@ -830,18 +847,32 @@ class _CheckoutPageState extends State<CheckoutPage>
                               Radius.circular(100),
                             ),
                             child:
-                                imagePath.toString().startsWith('http')
+                                imagePath.toString().startsWith('https')
                                     ? Image.network(
                                       imagePath,
                                       width: 60,
                                       height: 60,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return _buildDefaultImage();
+                                      },
                                     )
                                     : Image.asset(
                                       imagePath,
                                       width: 60,
                                       height: 60,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return _buildDefaultImage();
+                                      },
                                     ),
                           ),
                           const SizedBox(width: 12),
