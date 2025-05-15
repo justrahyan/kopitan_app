@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:kopitan_app/pages/app_main_screen.dart';
+import 'package:kopitan_app/services/notification_preference.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'order_status_page.dart';
 
 class KopitanOrderScreen extends StatefulWidget {
@@ -16,16 +19,112 @@ class KopitanOrderScreen extends StatefulWidget {
 class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final Map<String, String> _previousStatusMap = {};
   final currencyFormat = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp. ',
     decimalDigits: 0,
   );
 
+  Future<void> _initNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (
+        NotificationResponse notificationResponse,
+      ) {
+        final String? payload = notificationResponse.payload;
+        if (payload != null) {
+          debugPrint('Notification payload: $payload');
+        }
+      },
+    );
+  }
+
+  Future<void> _showStatusNotification(String status, String orderId) async {
+    if (!NotificationPreference.getNotificationStatus()) return;
+    final previousStatus = _previousStatusMap[orderId] ?? '';
+
+    if (previousStatus == status) return;
+
+    _previousStatusMap[orderId] = status;
+    await _savePreviousStatus(orderId, status);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'order_status_channel',
+          'Order Status Notifications',
+          channelDescription: 'Notifications for order status updates',
+          importance: Importance.high,
+          priority: Priority.high,
+          showWhen: true,
+          enableVibration: true,
+          playSound: true,
+          icon: '@drawable/icon_app',
+        );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    String title, body;
+    int notificationId;
+
+    switch (status) {
+      case 'processing':
+        title = 'Pesanan Diterima';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda sedang diproses. Mohon tunggu sebentar.';
+        notificationId = 0;
+        break;
+      case 'ready':
+        title = 'Pesanan Siap Diambil';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda siap untuk diambil. Silakan ambil di outlet kami.';
+        notificationId = 1;
+        break;
+      case 'completed':
+        title = 'Pesanan Selesai';
+        body =
+            'Pesanan #${_formatOrderId(orderId)} Anda telah selesai. Terima kasih telah berbelanja di Kopitan!';
+        notificationId = 2;
+        break;
+      default:
+        return;
+    }
+
+    await flutterLocalNotificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      details,
+      payload: 'order_id:$orderId',
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initNotifications();
+  }
+
+  Future<void> _loadPreviousStatus(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final status = prefs.getString('previous_status_$orderId') ?? '';
+    setState(() {
+      _previousStatusMap[orderId] = status;
+    });
+  }
+
+  Future<void> _savePreviousStatus(String orderId, String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('previous_status_$orderId', status);
   }
 
   @override
@@ -215,6 +314,10 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
       default:
         statusText = 'Menunggu Konfirmasi';
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadPreviousStatus(orderId);
+      await _showStatusNotification(status, orderId);
+    });
 
     return GestureDetector(
       onTap: () {

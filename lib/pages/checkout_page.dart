@@ -81,6 +81,7 @@ class _CheckoutPageState extends State<CheckoutPage>
         showWhen: true,
         enableVibration: true,
         playSound: true,
+        icon: '@drawable/icon_app',
       );
 
       const details = NotificationDetails(android: androidDetails);

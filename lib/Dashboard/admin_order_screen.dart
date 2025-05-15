@@ -77,6 +77,7 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
           showWhen: true,
           enableVibration: true,
           playSound: true,
+          icon: '@drawable/icon_app',
         );
 
     const DarwinNotificationDetails iOSPlatformChannelSpecifics =

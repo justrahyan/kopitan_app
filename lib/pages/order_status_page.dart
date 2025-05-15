@@ -88,6 +88,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
           showWhen: true,
           enableVibration: true,
           playSound: true,
+          icon: '@drawable/icon_app',
         );
 
     const NotificationDetails details = NotificationDetails(
@@ -911,7 +912,7 @@ class _SwipeToUseCodeWidgetState extends State<SwipeToUseCodeWidget> {
           importance: Importance.high,
           priority: Priority.high,
           color: Color(0xFF9A534F), // xprimaryColor
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/icon_app',
         );
 
     const NotificationDetails details = NotificationDetails(

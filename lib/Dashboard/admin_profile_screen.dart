@@ -321,13 +321,11 @@ class AdminProfileScreen extends StatelessWidget {
                         'Nomor Telepon',
                         userData['phone'] ?? '',
                       ),
+                      const SizedBox(height: 24),
+                      _buildLogoutButton(context),
                     ],
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: _buildLogoutButton(context),
               ),
             ],
           );

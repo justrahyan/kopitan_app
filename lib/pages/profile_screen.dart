@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/pages/login_screen.dart';
-import 'package:kopitan_app/pages/order_status_page.dart';
 import 'package:kopitan_app/services/notification_preference.dart';
 
 class KopitanProfileScreen extends StatefulWidget {
@@ -217,17 +215,17 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
               _showNotificationSheet,
             ),
             _buildAlamatItem(),
-            const SizedBox(height: 24),
-            const Text(
-              'Pengaturan Privasi',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingItem(
-              HugeIcons.strokeRoundedSecurityLock,
-              'Kelola Privasi',
-              _showPrivacySheet,
-            ),
+            // const SizedBox(height: 24),
+            // const Text(
+            //   'Pengaturan Privasi',
+            //   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            // ),
+            // const SizedBox(height: 12),
+            // _buildSettingItem(
+            //   HugeIcons.strokeRoundedSecurityLock,
+            //   'Kelola Privasi',
+            //   _showPrivacySheet,
+            // ),
             const SizedBox(height: 24),
             _buildLogoutButton(),
           ],
@@ -495,29 +493,6 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     );
   }
 
-  Future<void> _showToggleNotification(bool isOn) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'toggle_channel',
-          'Toggle Notification',
-          channelDescription: 'Menampilkan status toggle notifikasi',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        );
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      5,
-      'Status Notifikasi',
-      isOn ? 'Notifikasi diaktifkan' : 'Notifikasi dinonaktifkan',
-      details,
-    );
-  }
-
   bool isNotificationOn = true;
   void _showNotificationSheet() {
     showModalBottomSheet(
@@ -574,33 +549,33 @@ class _KopitanProfileScreenState extends State<KopitanProfileScreen> {
     );
   }
 
-  void _showPrivacySheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return const Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Kelola Privasi',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Bingung mau diisi apa...',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // void _showPrivacySheet() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     backgroundColor: Colors.white,
+  //     shape: const RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //     ),
+  //     builder: (context) {
+  //       return const Padding(
+  //         padding: EdgeInsets.all(20),
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text(
+  //               'Kelola Privasi',
+  //               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+  //             ),
+  //             SizedBox(height: 20),
+  //             Text(
+  //               'Bingung mau diisi apa...',
+  //               style: TextStyle(fontSize: 14, color: Colors.grey),
+  //             ),
+  //             SizedBox(height: 20),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/Dashboard/edit_menu_page.dart';
 
 class RecommendedMenuPage extends StatelessWidget {
