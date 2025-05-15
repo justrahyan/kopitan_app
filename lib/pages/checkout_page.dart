@@ -78,8 +78,9 @@ class _CheckoutPageState extends State<CheckoutPage>
         channelDescription: 'Notifications for payment status',
         importance: Importance.high,
         priority: Priority.high,
-        color: Color(0xFF9A534F),
-        icon: '@mipmap/ic_launcher',
+        showWhen: true,
+        enableVibration: true,
+        playSound: true,
       );
 
       const details = NotificationDetails(android: androidDetails);
@@ -139,14 +140,28 @@ class _CheckoutPageState extends State<CheckoutPage>
     if (user == null) return;
 
     try {
-      // First, get all current orders to combine into a complete order history
+      // Ambil data user dari Firestore
+      String userName = 'Pengguna';
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        userName = userData['full_name'] ?? user.displayName ?? 'Pengguna';
+      } else {
+        userName = user.displayName ?? 'Pengguna';
+      }
+
+      // Ambil semua pesanan yang sedang berlangsung
       final orderSnapshot =
           await FirebaseFirestore.instance
               .collection('orders')
               .where('userId', isEqualTo: user.uid)
               .get();
 
-      // Extract order items
       final List<Map<String, dynamic>> orderItems = [];
       for (final doc in orderSnapshot.docs) {
         final data = doc.data();
@@ -161,10 +176,10 @@ class _CheckoutPageState extends State<CheckoutPage>
         });
       }
 
-      // Save to order_history collection
+      // Simpan ke koleksi order_history
       await FirebaseFirestore.instance.collection('order_history').add({
         'userId': user.uid,
-        'userName': user.displayName ?? 'Pengguna',
+        'userName': userName,
         'orderId': orderId,
         'items': orderItems,
         'totalAmount': totalAmount,

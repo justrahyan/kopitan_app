@@ -85,8 +85,9 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
           channelDescription: 'Notifications for order status updates',
           importance: Importance.high,
           priority: Priority.high,
-          color: Color(0xFF9A534F), // xprimaryColor
-          icon: '@mipmap/ic_launcher',
+          showWhen: true,
+          enableVibration: true,
+          playSound: true,
         );
 
     const NotificationDetails details = NotificationDetails(

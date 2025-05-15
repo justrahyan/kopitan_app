@@ -290,7 +290,6 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     );
   }
 
-  // ✅ Menampilkan 3 digit terakhir dari orderId yang seperti: ORDER-1746559805437 → 437
   String _formatOrderId(String orderId) {
     final parts = orderId.split('-');
     if (parts.length == 2) {
@@ -325,10 +324,10 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
                       height: 55,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultImage();
+                        return _buildDefaultImage(45);
                       },
                     )
-                    : _buildDefaultImage(),
+                    : _buildDefaultImage(45),
           ),
         ),
       );
@@ -361,15 +360,16 @@ class _KopitanOrderScreenState extends State<KopitanOrderScreen>
     return Row(children: imageWidgets);
   }
 
-  Widget _buildDefaultImage() {
+  Widget _buildDefaultImage(double size) {
     return Container(
-      width: 55,
-      height: 55,
-      decoration: BoxDecoration(
-        color: Colors.brown[200],
-        shape: BoxShape.circle,
+      width: size,
+      height: size,
+      color: Colors.grey.shade300,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 20,
+        color: Colors.grey,
       ),
-      child: const Center(child: Icon(Icons.coffee, color: Colors.brown)),
     );
   }
 }

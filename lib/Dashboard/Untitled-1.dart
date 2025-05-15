@@ -245,23 +245,51 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const Center(child: Text('Tidak ada data'));
+        }
+
+        final docs = snapshot.data!.docs;
 
         // Filter pesanan berdasarkan status dan tanggal (hanya tampilkan pesanan hari ini)
         final orders =
             docs.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final timestamp = (data['timestamp'] as Timestamp).toDate();
+              try {
+                final data = doc.data() as Map<String, dynamic>;
 
-              // Cek apakah pesanan pada hari ini (atau setelah tengah malam)
-              final isToday =
-                  timestamp.isAfter(startOfToday) ||
-                  (timestamp.year == startOfToday.year &&
-                      timestamp.month == startOfToday.month &&
-                      timestamp.day == startOfToday.day);
+                // Cek status
+                final status = data['status'] as String?;
+                if (status == null || !statuses.contains(status)) {
+                  return false;
+                }
 
-              // Hanya tampilkan pesanan dengan status yang sesuai dan dari hari ini
-              return statuses.contains(data['status']) && isToday;
+                // Cek timestamp
+                final timestampRaw = data['timestamp'];
+                if (timestampRaw == null) return false;
+
+                DateTime timestamp;
+                if (timestampRaw is Timestamp) {
+                  timestamp = timestampRaw.toDate();
+                } else {
+                  return false;
+                }
+
+                // Cek apakah pesanan hari ini
+                final isToday =
+                    timestamp.isAfter(startOfToday) ||
+                    (timestamp.year == startOfToday.year &&
+                        timestamp.month == startOfToday.month &&
+                        timestamp.day == startOfToday.day);
+
+                return isToday;
+              } catch (e) {
+                print('Error memproses dokumen: $e');
+                return false;
+              }
             }).toList();
 
         if (orders.isEmpty) {
@@ -272,179 +300,198 @@ class _AdminOrderListPageState extends State<AdminOrderListPage>
           padding: const EdgeInsets.all(16),
           itemCount: orders.length,
           itemBuilder: (context, index) {
-            final doc = orders[index];
-            final data = doc.data() as Map<String, dynamic>;
-            final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
-            final timestamp = (data['timestamp'] as Timestamp).toDate();
-            final dateFormatted = DateFormat(
-              'dd MMM yyyy, HH:mm',
-            ).format(timestamp);
-            final status = data['status'] ?? '';
-            final totalAmount = data['totalAmount'] ?? 0;
-            final orderId = data['orderId']?.toString() ?? 'ORDER-000';
-            final formattedOrderId =
-                orderId.length >= 3
-                    ? orderId.substring(orderId.length - 3)
-                    : orderId;
+            try {
+              final doc = orders[index];
+              final data = doc.data() as Map<String, dynamic>;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: Colors.grey.shade300, // warna border
-                  width: 1, // ketebalan border
+              // Penanganan data item yang aman
+              List<Map<String, dynamic>> items = [];
+              try {
+                final itemsRaw = data['items'];
+                if (itemsRaw != null && itemsRaw is List) {
+                  items = List<Map<String, dynamic>>.from(
+                    itemsRaw.map(
+                      (item) => item is Map<String, dynamic> ? item : {},
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('Error memproses items: $e');
+              }
+
+              // Penanganan timestamp yang aman
+              DateTime timestamp = DateTime.now();
+              try {
+                final timestampRaw = data['timestamp'];
+                if (timestampRaw is Timestamp) {
+                  timestamp = timestampRaw.toDate();
+                }
+              } catch (e) {
+                print('Error memproses timestamp: $e');
+              }
+
+              final dateFormatted = DateFormat(
+                'dd MMM yyyy, HH:mm',
+              ).format(timestamp);
+              final status = data['status'] as String? ?? '';
+              final totalAmount =
+                  (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
+              final orderId = data['orderId']?.toString() ?? 'ORDER-000';
+              final formattedOrderId =
+                  orderId.length >= 3
+                      ? orderId.substring(orderId.length - 3)
+                      : orderId;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: Colors.grey.shade300, // warna border
+                    width: 1, // ketebalan border
+                  ),
                 ),
-              ),
-              color: Colors.white,
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Order ID & status
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '#$formattedOrderId',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                color: Colors.white,
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Order ID & status
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '#$formattedOrderId',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        ),
-                        Text(
-                          _statusText(status),
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateFormatted,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 12),
-                    // Item images dengan indikator +
-                    Stack(
-                      children: [
-                        Row(
-                          children: [
-                            ...items.take(3).map((item) {
-                              final imagePath =
-                                  item['imagePath'] as String? ?? '';
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(100),
-                                  child:
-                                      imagePath.isNotEmpty
-                                          ? (imagePath.startsWith('http')
-                                              ? Image.network(
-                                                imagePath,
-                                                width: 45,
-                                                height: 45,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (
-                                                  context,
-                                                  error,
-                                                  stackTrace,
-                                                ) {
-                                                  return _buildDefaultImage(45);
-                                                },
-                                              )
-                                              : Image.asset(
-                                                imagePath,
-                                                width: 45,
-                                                height: 45,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (
-                                                  context,
-                                                  error,
-                                                  stackTrace,
-                                                ) {
-                                                  return _buildDefaultImage(45);
-                                                },
-                                              ))
-                                          : _buildDefaultImage(45),
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
-
-                        if (items.length > 3)
-                          Positioned(
-                            left: 130, // Posisi setelah 3 item
-                            child: Container(
-                              width: 45,
-                              height: 45,
-                              decoration: BoxDecoration(
-                                color: xprimaryColor.withOpacity(0.8),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '+${items.length - 3}',
-                                  style: const TextStyle(
+                          Text(
+                            _statusText(status),
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateFormatted,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      // Item images dengan indikator +
+                      Stack(
+                        children: [
+                          Row(
+                            children: [
+                              ...items.take(3).map((item) {
+                                final imagePath =
+                                    item['imagePath'] as String? ?? '';
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(100),
+                                    child: _buildSafeImage(imagePath),
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                          if (items.length > 3)
+                            Positioned(
+                              left: 130, // Posisi setelah 3 item
+                              child: Container(
+                                width: 45,
+                                height: 45,
+                                decoration: BoxDecoration(
+                                  color: xprimaryColor.withOpacity(0.8),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '+${items.length - 3}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Total & Action Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Rp ${NumberFormat('#,###', 'id_ID').format(totalAmount)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Total & Action Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Rp ${NumberFormat('#,###', 'id_ID').format(totalAmount)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              '${items.length} items',
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                        _buildActionButton(status, doc.id),
-                      ],
-                    ),
-                  ],
+                              Text(
+                                '${items.length} items',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          _buildActionButton(status, doc.id),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
+              );
+            } catch (e) {
+              print('Error rendering order item: $e');
+              return const SizedBox.shrink(); // Return empty widget on error
+            }
           },
         );
       },
     );
   }
 
-  Widget _buildDefaultImage(double size) {
-    return Container(
-      width: size,
-      height: size,
-      color: Colors.grey.shade300,
-      child: const Icon(
-        Icons.image_not_supported,
-        size: 20,
-        color: Colors.grey,
-      ),
-    );
+  Widget _buildSafeImage(String imagePath) {
+    try {
+      return Image.asset(
+        imagePath,
+        width: 45,
+        height: 45,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 45,
+            height: 45,
+            color: Colors.grey.shade300,
+            child: const Icon(
+              Icons.image_not_supported,
+              size: 20,
+              color: Colors.grey,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error loading image: $e');
+      return Container(
+        width: 45,
+        height: 45,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.error, size: 20, color: Colors.grey),
+      );
+    }
   }
 
   Widget _buildActionButton(String status, String docId) {
