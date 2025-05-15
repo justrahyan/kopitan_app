@@ -583,141 +583,141 @@ class _CheckoutPageState extends State<CheckoutPage>
                       ),
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 30),
 
                     // OVO Option
-                    InkWell(
-                      onTap: () {
-                        this.setState(() {
-                          selectedPaymentMethod = 'OVO';
-                          selectedPaymentIcon =
-                              'assets/images/pembayaran/ovo.png';
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Image.asset(
-                                'assets/images/pembayaran/ovo.png',
-                                width: 32,
-                                height: 32,
-                                errorBuilder:
-                                    (context, error, stackTrace) => const Icon(
-                                      Icons.account_balance_wallet,
-                                      color: Colors.purple,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'OVO',
-                              style: TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            const Spacer(),
-                            Radio<String>(
-                              value: 'OVO',
-                              groupValue: selectedPaymentMethod,
-                              onChanged: (value) {
-                                this.setState(() {
-                                  selectedPaymentMethod = value!;
-                                  selectedPaymentIcon =
-                                      'assets/images/pembayaran/ovo.png';
-                                });
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // InkWell(
+                    //   onTap: () {
+                    //     this.setState(() {
+                    //       selectedPaymentMethod = 'OVO';
+                    //       selectedPaymentIcon =
+                    //           'assets/images/pembayaran/ovo.png';
+                    //     });
+                    //     Navigator.pop(context);
+                    //   },
+                    //   child: Container(
+                    //     padding: const EdgeInsets.symmetric(
+                    //       vertical: 12,
+                    //       horizontal: 8,
+                    //     ),
+                    //     decoration: BoxDecoration(
+                    //       border: Border.all(color: Colors.grey.shade300),
+                    //       borderRadius: BorderRadius.circular(10),
+                    //     ),
+                    //     child: Row(
+                    //       children: [
+                    //         Container(
+                    //           padding: const EdgeInsets.all(8),
+                    //           decoration: BoxDecoration(
+                    //             border: Border.all(color: Colors.grey.shade300),
+                    //             borderRadius: BorderRadius.circular(8),
+                    //           ),
+                    //           child: Image.asset(
+                    //             'assets/images/pembayaran/ovo.png',
+                    //             width: 32,
+                    //             height: 32,
+                    //             errorBuilder:
+                    //                 (context, error, stackTrace) => const Icon(
+                    //                   Icons.account_balance_wallet,
+                    //                   color: Colors.purple,
+                    //                 ),
+                    //           ),
+                    //         ),
+                    //         const SizedBox(width: 12),
+                    //         const Text(
+                    //           'OVO',
+                    //           style: TextStyle(fontWeight: FontWeight.w500),
+                    //         ),
+                    //         const Spacer(),
+                    //         Radio<String>(
+                    //           value: 'OVO',
+                    //           groupValue: selectedPaymentMethod,
+                    //           onChanged: (value) {
+                    //             this.setState(() {
+                    //               selectedPaymentMethod = value!;
+                    //               selectedPaymentIcon =
+                    //                   'assets/images/pembayaran/ovo.png';
+                    //             });
+                    //             Navigator.pop(context);
+                    //           },
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
 
-                    const SizedBox(height: 20),
+                    // const SizedBox(height: 20),
 
                     // Section Title: Lainnya
-                    const Text(
-                      'Lainnya',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
+                    // const Text(
+                    //   'Lainnya',
+                    //   style: TextStyle(
+                    //     fontWeight: FontWeight.bold,
+                    //     color: Colors.grey,
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 10),
 
                     // QRIS Option
-                    InkWell(
-                      onTap: () {
-                        this.setState(() {
-                          selectedPaymentMethod = 'QRIS';
-                          selectedPaymentIcon =
-                              'assets/images/pembayaran/qris.png';
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Image.asset(
-                                'assets/images/pembayaran/qris.png',
-                                width: 32,
-                                height: 32,
-                                errorBuilder:
-                                    (context, error, stackTrace) => const Icon(
-                                      Icons.qr_code,
-                                      color: Colors.black,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'QRIS',
-                              style: TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            const Spacer(),
-                            Radio<String>(
-                              value: 'QRIS',
-                              groupValue: selectedPaymentMethod,
-                              onChanged: (value) {
-                                this.setState(() {
-                                  selectedPaymentMethod = value!;
-                                  selectedPaymentIcon =
-                                      'assets/images/pembayaran/qris.png';
-                                });
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // InkWell(
+                    //   onTap: () {
+                    //     this.setState(() {
+                    //       selectedPaymentMethod = 'QRIS';
+                    //       selectedPaymentIcon =
+                    //           'assets/images/pembayaran/qris.png';
+                    //     });
+                    //     Navigator.pop(context);
+                    //   },
+                    //   child: Container(
+                    //     padding: const EdgeInsets.symmetric(
+                    //       vertical: 12,
+                    //       horizontal: 8,
+                    //     ),
+                    //     decoration: BoxDecoration(
+                    //       border: Border.all(color: Colors.grey.shade300),
+                    //       borderRadius: BorderRadius.circular(10),
+                    //     ),
+                    //     child: Row(
+                    //       children: [
+                    //         Container(
+                    //           padding: const EdgeInsets.all(8),
+                    //           decoration: BoxDecoration(
+                    //             border: Border.all(color: Colors.grey.shade300),
+                    //             borderRadius: BorderRadius.circular(8),
+                    //           ),
+                    //           child: Image.asset(
+                    //             'assets/images/pembayaran/qris.png',
+                    //             width: 32,
+                    //             height: 32,
+                    //             errorBuilder:
+                    //                 (context, error, stackTrace) => const Icon(
+                    //                   Icons.qr_code,
+                    //                   color: Colors.black,
+                    //                 ),
+                    //           ),
+                    //         ),
+                    //         const SizedBox(width: 12),
+                    //         const Text(
+                    //           'QRIS',
+                    //           style: TextStyle(fontWeight: FontWeight.w500),
+                    //         ),
+                    //         const Spacer(),
+                    //         Radio<String>(
+                    //           value: 'QRIS',
+                    //           groupValue: selectedPaymentMethod,
+                    //           onChanged: (value) {
+                    //             this.setState(() {
+                    //               selectedPaymentMethod = value!;
+                    //               selectedPaymentIcon =
+                    //                   'assets/images/pembayaran/qris.png';
+                    //             });
+                    //             Navigator.pop(context);
+                    //           },
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               );
