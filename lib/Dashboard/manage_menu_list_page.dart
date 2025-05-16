@@ -160,19 +160,77 @@ class ManageMenuListPage extends StatelessWidget {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      if (stock > 0) {
-                                        FirebaseFirestore.instance
-                                            .collection('menus')
-                                            .doc(doc.id)
-                                            .update({'stock': stock - 1});
-                                      }
-                                    },
-                                  ),
+                                  stock == 1
+                                      ? IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (context) => AlertDialog(
+                                                  title: const Text(
+                                                    'Hapus Menu',
+                                                  ),
+                                                  content: const Text(
+                                                    'Apakah Anda yakin ingin menghapus menu ini?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      child: const Text(
+                                                        'Batal',
+                                                      ),
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          ),
+                                                    ),
+                                                    TextButton(
+                                                      child: const Text(
+                                                        'Hapus',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+
+                                          if (confirm == true) {
+                                            await FirebaseFirestore.instance
+                                                .collection('menus')
+                                                .doc(doc.id)
+                                                .delete();
+                                          }
+                                        },
+                                      )
+                                      : IconButton(
+                                        icon: const Icon(Icons.remove),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          if (stock > 0) {
+                                            FirebaseFirestore.instance
+                                                .collection('menus')
+                                                .doc(doc.id)
+                                                .update({'stock': stock - 1});
+                                          }
+                                        },
+                                      ),
+
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,

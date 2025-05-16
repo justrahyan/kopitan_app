@@ -362,7 +362,7 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
               child:
                   menu.imageUrl.startsWith('http')
                       ? Image.network(
-                        menu.imageUrl,
+                        'https://i.imgur.com/96J5PIt.jpeg',
                         fit: BoxFit.cover,
                         width: double.infinity,
                       )
