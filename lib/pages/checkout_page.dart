@@ -794,8 +794,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                             );
                             navigatorState.popUntil((route) => route.isFirst);
 
-                            // Use Future.delayed to ensure we're back at the main screen before switching tabs
-                            // Use Future.delayed to ensure we're back at the main screen before switching tabs
                             Future.delayed(
                               const Duration(milliseconds: 100),
                               () {

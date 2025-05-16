@@ -6,7 +6,8 @@ import 'package:kopitan_app/pages/menu_detail_screen.dart';
 import 'package:kopitan_app/widgets/order_bar_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kopitan_app/pages/app_main_screen.dart'; // <- penting
+import 'package:kopitan_app/pages/app_main_screen.dart';
+import 'package:intl/intl.dart';
 
 class KopitanHomeScreen extends StatefulWidget {
   const KopitanHomeScreen({super.key});
@@ -41,6 +42,12 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
       }
     }
   }
+
+  final currencyFormat = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp. ',
+    decimalDigits: 0,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +152,14 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    final mainState =
+                        context
+                            .findAncestorStateOfType<
+                              KopitanAppMainScreenState
+                            >();
+                    mainState?.switchToTab(1);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: xprimaryColor,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -291,9 +305,10 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
                   snapshot.data!.docs
                       .where((doc) {
                         final data = doc.data() as Map<String, dynamic>;
-                        // Filter menu yang tidak direkomendasikan
-                        return data['isRecommended'] == null ||
-                            data['isRecommended'] == false;
+                        // Filter menu yang tidak direkomendasikan dan stok > 0
+                        final isRecommended = data['isRecommended'] ?? false;
+                        final stok = data['stock'] ?? 0;
+                        return !isRecommended && stok > 0;
                       })
                       .map((doc) {
                         return MenuItemModel.fromFirestore(
@@ -342,59 +357,79 @@ class _KopitanHomeScreenState extends State<KopitanHomeScreen> {
   }
 
   Widget _buildMenuCard(MenuItemModel menu) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
-        border: Border.all(
-          color: Colors.grey.shade300, // warna border
-          width: 1, // ketebalan border
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(5),
-              ),
-              child:
-                  menu.imageUrl.startsWith('http')
-                      ? Image.network(
-                        menu.imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      )
-                      : Image.asset(
-                        menu.imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      ),
-            ),
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade300, width: 1),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  menu.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(5),
                   ),
+                  child:
+                      menu.imageUrl.startsWith('http')
+                          ? Image.network(
+                            menu.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          )
+                          : Image.asset(
+                            menu.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "Rp. ${menu.price}",
-                  style: const TextStyle(color: Colors.grey),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      menu.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Rp. ${NumberFormat('#,###', 'id_ID').format(menu.price)}",
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        // Overlay tulisan 'Habis'
+        if (menu.stock == 0)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'Habis',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

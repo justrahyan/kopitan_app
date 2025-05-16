@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -29,37 +30,65 @@ class _AddMenuPageState extends State<AddMenuPage> {
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
-      setState(() {
-        _selectedImage = File(picked.path);
-      });
-      await _uploadToImgur(File(picked.path));
+      // Kompres gambar sebelum upload
+      final compressedImage = await compressImage(File(picked.path));
+      setState(() => _selectedImage = compressedImage);
+      await _uploadToImgur(compressedImage);
     }
   }
 
-  Future<void> _uploadToImgur(File imageFile) async {
-    final bytes = await imageFile.readAsBytes();
-    final base64Image = base64Encode(bytes);
-
-    const clientId = '2982e95b7871a36'; // Ganti dengan Client-ID kamu
-    final response = await http.post(
-      Uri.parse('https://api.imgur.com/3/image'),
-      headers: {'Authorization': 'Client-ID $clientId'},
-      body: {'image': base64Image, 'type': 'base64'},
-    );
-
-    final jsonResponse = json.decode(response.body);
-    if (jsonResponse['success']) {
-      setState(() {
-        _uploadedImageUrl = jsonResponse['data']['link'];
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal upload gambar: ${jsonResponse['data']['error']}',
-          ),
-        ),
+  Future<File> compressImage(File file) async {
+    try {
+      final result = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path, // Gunakan absolute path
+        file.path + '_compressed.jpg', // Output path
+        quality: 70, // Kualitas 0-100 (70 cukup optimal)
       );
+      if (result == null) {
+        throw Exception("Gagal mengompres gambar");
+      }
+      return File(result.path);
+    } catch (e) {
+      print("Error saat kompresi: $e");
+      return file; // Jika gagal, kembalikan file asli
+    }
+  }
+
+  bool _isUploading = false;
+
+  Future<void> _uploadToImgur(File imageFile) async {
+    setState(() => _isUploading = true);
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      const clientId = '2982e95b7871a36';
+      final response = await http.post(
+        Uri.parse('https://api.imgur.com/3/image'),
+        headers: {'Authorization': 'Client-ID $clientId'},
+        body: {'image': base64Image, 'type': 'base64'},
+      );
+
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['success']) {
+        setState(() {
+          _uploadedImageUrl = jsonResponse['data']['link'];
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal upload gambar: ${jsonResponse['data']['error']}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() => _isUploading = false);
     }
   }
 
@@ -114,38 +143,30 @@ class _AddMenuPageState extends State<AddMenuPage> {
           child: ListView(
             children: [
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _isUploading ? null : _pickImage,
                 child: Container(
                   height: 180,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.grey.shade300, // warna border
-                      width: 1, // ketebalan border
-                    ),
-                    borderRadius: BorderRadius.circular(12), // radius sudut
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      12,
-                    ), // agar gambar juga ikut rounded
-                    child:
-                        _selectedImage != null
-                            ? Image.file(
-                              _selectedImage!,
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            )
-                            : Container(
-                              color: Colors.transparent,
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.add_photo_alternate,
-                                size: 60,
-                                color: Colors.grey,
-                              ),
-                            ),
-                  ),
+                  child:
+                      _isUploading
+                          ? Center(child: CircularProgressIndicator())
+                          : ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child:
+                                _selectedImage != null
+                                    ? Image.file(
+                                      _selectedImage!,
+                                      fit: BoxFit.cover,
+                                    )
+                                    : Icon(
+                                      Icons.add_photo_alternate,
+                                      size: 60,
+                                      color: Colors.grey,
+                                    ),
+                          ),
                 ),
               ),
               const SizedBox(height: 16),

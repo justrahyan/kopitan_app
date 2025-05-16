@@ -10,6 +10,19 @@ class ManageMenuListPage extends StatelessWidget {
   final String category;
   const ManageMenuListPage({super.key, required this.category});
 
+  Widget _buildDefaultImage(double size) {
+    return Container(
+      width: size,
+      height: size,
+      color: Colors.grey.shade300,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 20,
+        color: Colors.grey,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final normalizedCategory = category.toLowerCase();
@@ -84,8 +97,7 @@ class ManageMenuListPage extends StatelessWidget {
                     );
                   },
                   errorBuilder:
-                      (context, error, stackTrace) =>
-                          const Icon(Icons.broken_image, size: 80),
+                      (context, error, stackTrace) => _buildDefaultImage(80),
                 );
               } else {
                 // Gambar dari lokal asset
@@ -161,11 +173,20 @@ class ManageMenuListPage extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.remove),
+                                    icon: Icon(
+                                      stock == 1 ? Icons.delete : Icons.remove,
+                                    ),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () {
-                                      if (stock > 0) {
+                                      if (stock == 1) {
+                                        // Hapus menu jika stok 1 dan tombol ditekan
+                                        FirebaseFirestore.instance
+                                            .collection('menus')
+                                            .doc(doc.id)
+                                            .delete();
+                                      } else if (stock > 1) {
+                                        // Kurangi stok jika lebih dari 1
                                         FirebaseFirestore.instance
                                             .collection('menus')
                                             .doc(doc.id)
@@ -173,6 +194,7 @@ class ManageMenuListPage extends StatelessWidget {
                                       }
                                     },
                                   ),
+
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,

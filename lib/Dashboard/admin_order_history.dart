@@ -189,6 +189,7 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
                       FirebaseFirestore.instance
                           .collection('order_history')
                           .orderBy('timestamp', descending: true)
+                          .limit(20)
                           .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -287,25 +288,56 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
-                                    ...items
-                                        .take(3)
-                                        .map(
-                                          (item) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              right: 8,
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(100),
-                                              child: Image.asset(
-                                                item['imagePath'] ?? '',
-                                                width: 45,
-                                                height: 45,
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
+                                    ...items.take(3).map((item) {
+                                      final imagePath =
+                                          item['imagePath'] as String? ?? '';
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8,
                                         ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            100,
+                                          ),
+                                          child:
+                                              imagePath.isNotEmpty
+                                                  ? (imagePath.startsWith(
+                                                        'http',
+                                                      )
+                                                      ? Image.network(
+                                                        imagePath,
+                                                        width: 45,
+                                                        height: 45,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) {
+                                                          return _buildDefaultImage(
+                                                            45,
+                                                          );
+                                                        },
+                                                      )
+                                                      : Image.asset(
+                                                        imagePath,
+                                                        width: 45,
+                                                        height: 45,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) {
+                                                          return _buildDefaultImage(
+                                                            45,
+                                                          );
+                                                        },
+                                                      ))
+                                                  : _buildDefaultImage(45),
+                                        ),
+                                      );
+                                    }),
                                     if (items.length > 3)
                                       Container(
                                         width: 45,
@@ -368,6 +400,19 @@ class _AdminOrderHistoryPageState extends State<AdminOrderHistoryPage>
           ),
           const ReportsTab(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultImage(double size) {
+    return Container(
+      width: size,
+      height: size,
+      color: Colors.grey.shade300,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 20,
+        color: Colors.grey,
       ),
     );
   }

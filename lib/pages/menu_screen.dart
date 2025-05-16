@@ -5,6 +5,7 @@ import 'package:kopitan_app/colors.dart';
 import 'package:kopitan_app/models/menu_item_model.dart';
 import 'package:kopitan_app/pages/menu_detail_screen.dart';
 import 'package:kopitan_app/widgets/order_bar_widget.dart';
+import 'package:intl/intl.dart';
 
 class KopitanMenuScreen extends StatefulWidget {
   const KopitanMenuScreen({super.key, this.initialCategory});
@@ -265,7 +266,7 @@ class KopitanMenuScreenState extends State<KopitanMenuScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "Rp. ${menu.price}",
+                                  "Rp. ${NumberFormat('#,###', 'id_ID').format(menu.price)}",
                                   style: const TextStyle(color: Colors.grey),
                                 ),
                               ],
